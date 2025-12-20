@@ -2,9 +2,10 @@
 
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
+import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
-import Navbar from '@/components/Navbar';
 import Select from '@/components/Select';
+import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
 import { useState } from 'react';
 
@@ -32,18 +33,19 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="flex h-screen bg-background overflow-hidden">
+      <Sidebar />
       
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Manage your HR templates and documents efficiently
-          </p>
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardNavbar />
+        
+        <main className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="mb-8">
+            <p className="text-sm text-muted-foreground mb-2">Welcome back</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              Dashboard Overview
+            </h1>
+          </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
@@ -325,7 +327,8 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
