@@ -1,6 +1,18 @@
 'use client';
 
+import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
+
 export default function DashboardNavbar() {
+  const router = useRouter();
+
+  const onSignOut = async () => {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace('/login');
+    router.refresh();
+  };
+
   return (
     <header className="h-16 bg-background border-b border-border flex items-center justify-between px-6">
       <div className="flex items-center space-x-4">
@@ -60,6 +72,13 @@ export default function DashboardNavbar() {
               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
             />
           </svg>
+        </button>
+
+        <button
+          onClick={onSignOut}
+          className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+        >
+          Sign out
         </button>
       </div>
     </header>
