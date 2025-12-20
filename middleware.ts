@@ -1,7 +1,8 @@
+import { ADMIN_ROLES } from '@/lib/roles';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/change-password'];
+const PROTECTED_PREFIXES = ['/dashboard', '/change-password', '/commander'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -41,6 +42,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (pathname === '/commander' || pathname.startsWith('/commander/')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('hr_rank')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const role = profile?.hr_rank ?? null;
+    if (!role || !(ADMIN_ROLES as readonly string[]).includes(role)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (user.user_metadata?.must_change_password && pathname !== '/change-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/change-password';
@@ -51,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/change-password'],
+  matcher: ['/dashboard/:path*', '/change-password', '/commander/:path*'],
 };
