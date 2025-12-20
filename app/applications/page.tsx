@@ -7,6 +7,7 @@ import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 function escapeHtml(input: string) {
   return input
@@ -25,7 +26,7 @@ function safeUrl(url: string) {
 
 function bbcodeToHtml(bbcode: string) {
   // Escape first, then selectively re-introduce safe HTML tags.
-  let s = escapeHtml(bbcode);
+  let s = escapeHtml(bbcode.trimStart());
 
   // Basic formatting
   s = s.replaceAll(/\[b\]/gi, '<strong>');
@@ -98,6 +99,22 @@ function bbcodeToHtml(bbcode: string) {
   // Newlines -> <br>
   s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
 
+  // Clean up leading spacing and common artifacts (especially around [TABLE] blocks)
+  s = s.replace(/^(?:\s*<br \/>\s*)+/i, '');
+  s = s.replaceAll(/<br \/>\s*(?=<(?:table|tr|td|\/table|\/tr|\/td)\b)/gi, '');
+  s = s.replaceAll(/(<\/(?:td|tr|table)>)(?:\s*<br \/>\s*)+/gi, '$1');
+
+  return s;
+}
+
+function markdownToHtml(markdown: string) {
+  let s = escapeHtml(markdown);
+  // Bold **text**
+  s = s.replaceAll(/\*\*([^\n*]+)\*\*/g, '<strong>$1</strong>');
+  // Auto-link URLs
+  s = s.replaceAll(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noreferrer" style="text-decoration:underline">$1</a>');
+  // Newlines
+  s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
   return s;
 }
 
@@ -130,6 +147,9 @@ export default function ApplicationsPage() {
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [gettingScore, setGettingScore] = useState(false);
+
+  const [logCopied, setLogCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -201,11 +221,23 @@ export default function ApplicationsPage() {
   };
 
   const handleCopy = async () => {
-    if (generatedBBC) {
+    try {
+      if (!generatedBBC) return;
       await navigator.clipboard.writeText(generatedBBC);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.success('BBC code copied');
+    } catch {
+      toast.error('Failed to copy BBC code');
     }
+  };
+
+  const logMarkdown = `**Application/Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
+
+  const handleCopyLog = async () => {
+    await navigator.clipboard.writeText(logMarkdown);
+    setLogCopied(true);
+    setTimeout(() => setLogCopied(false), 2000);
   };
 
   const handleSaveActivity = async () => {
@@ -235,6 +267,50 @@ export default function ApplicationsPage() {
     }
 
     setSaving(false);
+  };
+
+  const handleGetScore = async () => {
+    if (!generatedBBC || !profile) return;
+
+    setGettingScore(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error('You are not signed in');
+        return;
+      }
+
+      const reasonsText = reasons.filter(r => r.trim()).join('; ');
+
+      const { error } = await supabase.from('application_activities').insert({
+        user_id: user.id,
+        status: selectedStatus,
+        applicant_name: applicantName,
+        hr_rank: profile.hr_rank,
+        hr_name: profile.full_name,
+        reasons: reasonsText || null,
+        generated_bbc: generatedBBC,
+      });
+
+      if (error) {
+        toast.error(error.message || 'Failed to save activity');
+        return;
+      }
+
+      toast.success('Saved successfully');
+
+      setApplicantName('');
+      setReasons(['']);
+      setGeneratedBBC('');
+      setCopied(false);
+      setLogCopied(false);
+    } catch {
+      toast.error('Failed to save activity');
+    } finally {
+      setGettingScore(false);
+    }
   };
 
   const addReason = () => {
@@ -363,6 +439,33 @@ export default function ApplicationsPage() {
                       </div>
                     </div>
                   )}
+
+                  <div className="pt-4 border-t border-border">
+                    <h3 className="text-lg font-semibold text-foreground mb-3">
+                      Logging Section
+                    </h3>
+
+                    {generatedBBC ? (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button onClick={handleCopyLog} className="w-full">
+                            {logCopied ? '✓ Copied!' : 'Copy Log'}
+                          </Button>
+                        </div>
+
+                        <div className="p-3 bg-secondary rounded-md">
+                          <div
+                            className="text-sm text-foreground overflow-x-auto"
+                            dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Generate a template to show the log markdown.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -377,9 +480,18 @@ export default function ApplicationsPage() {
                     <Button
                       onClick={handleCopy}
                       disabled={!generatedBBC}
-                      className="w-full"
+                      variant="outline"
+                      className="flex-1"
                     >
                       {copied ? '✓ Copied!' : 'Copy to Clipboard'}
+                    </Button>
+                    <Button
+                      onClick={handleGetScore}
+                      disabled={!generatedBBC || gettingScore}
+                      variant="primary"
+                      className="flex-1"
+                    >
+                      {gettingScore ? 'Saving…' : 'Get Score'}
                     </Button>
                   </div>
 

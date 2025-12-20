@@ -9,6 +9,16 @@ import { HR_ROLES } from '@/lib/roles';
 import { isValidUsername, normalizeUsername } from '@/lib/username';
 import { useState } from 'react';
 
+const LSFMD_RANKS = [
+  'Paramedic',
+  'Senior Paramedic',
+  'Lead Paramedic',
+  'Lieutenant',
+  'Captain',
+  'Assistant Chief',
+  'Chief',
+] as const;
+
 type Result = {
   username: string;
   tempPassword: string;
@@ -119,12 +129,11 @@ export default function CommanderCreateAccountPage() {
                   required
                 />
 
-                <Input
+                <Select
                   label="LSFMD Rank"
-                  placeholder="Rank"
                   value={lsfmdRank}
                   onChange={(e) => setLsfmdRank(e.target.value)}
-                  required
+                  options={LSFMD_RANKS.map((r) => ({ value: r, label: r }))}
                 />
 
                 <Select
