@@ -1,10 +1,40 @@
 'use client';
 
+import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+interface UserProfile {
+  full_name: string;
+  username: string;
+  hr_rank: string;
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, username, hr_rank')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setProfile(data);
+        }
+      }
+    };
+    
+    fetchProfile();
+  }, []);
 
   const navigation = [
     {
@@ -13,6 +43,15 @@ export default function Sidebar() {
       icon: (
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'Applications',
+      href: '/applications',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
         </svg>
       ),
     },
@@ -95,16 +134,47 @@ export default function Sidebar() {
             </Link>
           );
         })}
+        
+        {profile && (profile.hr_rank === 'Commander' || profile.hr_rank === 'Assistant Commander') && (
+          <>
+            <div className="px-3 py-2 mt-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Admin Tools
+              </p>
+            </div>
+            <Link
+              href="/commander/create-account"
+              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                pathname === '/commander/create-account'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <span className="mr-3">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                </svg>
+              </span>
+              Create Account
+            </Link>
+          </>
+        )}
       </nav>
 
       <div className="p-4 border-t border-border">
         <div className="flex items-center space-x-3 px-3 py-2">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary">AD</span>
+            <span className="text-sm font-semibold text-primary">
+              {profile ? profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'U'}
+            </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">Admin User</p>
-            <p className="text-xs text-muted-foreground truncate">admin@company.com</p>
+            <p className="text-sm font-medium text-foreground truncate">
+              {profile?.full_name || 'Loading...'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {profile?.hr_rank || ''}
+            </p>
           </div>
         </div>
       </div>
