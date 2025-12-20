@@ -2,7 +2,7 @@ import { ADMIN_ROLES } from '@/lib/roles';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/change-password', '/commander', '/applications', '/reinstatement'];
+const PROTECTED_PREFIXES = ['/dashboard', '/change-password', '/commander', '/applications', '/reinstatement', '/trainings'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -67,5 +67,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/change-password', '/commander/:path*', '/applications/:path*', '/reinstatement/:path*'],
+  matcher: ['/dashboard/:path*', '/change-password', '/commander/:path*', '/applications/:path*', '/reinstatement/:path*', '/trainings/:path*'],
 };

@@ -134,6 +134,7 @@ export default function ReinstatementPage() {
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [copied, setCopied] = useState(false);
   const [gettingScore, setGettingScore] = useState(false);
+  const [logCopied, setLogCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -218,6 +219,19 @@ export default function ReinstatementPage() {
     }
   };
 
+  const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
+
+  const handleCopyLog = async () => {
+    try {
+      await navigator.clipboard.writeText(logMarkdown);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 2000);
+      toast.success('Log copied');
+    } catch {
+      toast.error('Failed to copy log');
+    }
+  };
+
   const handleGetScore = async () => {
     if (!generatedBBC || !profile) return;
 
@@ -254,6 +268,7 @@ export default function ReinstatementPage() {
       setReasons(['']);
       setGeneratedBBC('');
       setCopied(false);
+      setLogCopied(false);
     } catch {
       toast.error('Failed to save activity');
     } finally {
@@ -339,6 +354,30 @@ export default function ReinstatementPage() {
                     <Button onClick={handleGenerate} disabled={!profile || templates.length === 0}>
                       Generate Template
                     </Button>
+
+                    <div className="pt-4 border-t border-border">
+                      <h3 className="text-lg font-semibold text-foreground mb-3">Logging Section</h3>
+
+                      {generatedBBC ? (
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <Button onClick={handleCopyLog} className="w-full">
+                              {logCopied ? '✓ Copied!' : 'Copy Log'}
+                            </Button>
+                          </div>
+
+                          <div className="p-3 bg-secondary rounded-md">
+                            <div className="text-sm text-foreground overflow-x-auto">
+                              <pre className="whitespace-pre-wrap">{logMarkdown}</pre>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Generate a template to show the log markdown.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

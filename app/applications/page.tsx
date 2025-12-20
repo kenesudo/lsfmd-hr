@@ -150,6 +150,7 @@ export default function ApplicationsPage() {
   const [gettingScore, setGettingScore] = useState(false);
 
   const [logCopied, setLogCopied] = useState(false);
+  const [interviewLogCopied, setInterviewLogCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -235,11 +236,28 @@ export default function ApplicationsPage() {
   };
 
   const logMarkdown = `**Application/Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
+  const interviewLogMarkdown = `**Application: Interview**\n**Applicant Name:**\n**Interview Result:**`;
 
   const handleCopyLog = async () => {
-    await navigator.clipboard.writeText(logMarkdown);
-    setLogCopied(true);
-    setTimeout(() => setLogCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(logMarkdown);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 2000);
+      toast.success('Log copied');
+    } catch {
+      toast.error('Failed to copy log');
+    }
+  };
+
+  const handleCopyInterviewLog = async () => {
+    try {
+      await navigator.clipboard.writeText(interviewLogMarkdown);
+      setInterviewLogCopied(true);
+      setTimeout(() => setInterviewLogCopied(false), 2000);
+      toast.success('Interview log copied');
+    } catch {
+      toast.error('Failed to copy interview log');
+    }
   };
 
   const handleSaveActivity = async () => {
@@ -308,6 +326,7 @@ export default function ApplicationsPage() {
       setGeneratedBBC('');
       setCopied(false);
       setLogCopied(false);
+      setInterviewLogCopied(false);
     } catch {
       toast.error('Failed to save activity');
     } finally {
@@ -456,18 +475,35 @@ export default function ApplicationsPage() {
                     </h3>
 
                     {generatedBBC ? (
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
-                          <Button onClick={handleCopyLog} className="w-full">
-                            {logCopied ? '✓ Copied!' : 'Copy Log'}
-                          </Button>
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <Button onClick={handleCopyLog} className="w-full">
+                              {logCopied ? '✓ Copied!' : 'Copy Log'}
+                            </Button>
+                          </div>
+
+                          <div className="p-3 bg-secondary rounded-md">
+                            <div
+                              className="text-sm text-foreground overflow-x-auto"
+                              dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
+                            />
+                          </div>
                         </div>
 
-                        <div className="p-3 bg-secondary rounded-md">
-                          <div
-                            className="text-sm text-foreground overflow-x-auto"
-                            dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
-                          />
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
+                              {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
+                            </Button>
+                          </div>
+
+                          <div className="p-3 bg-secondary rounded-md">
+                            <div
+                              className="text-sm text-foreground overflow-x-auto"
+                              dangerouslySetInnerHTML={{ __html: markdownToHtml(interviewLogMarkdown) }}
+                            />
+                          </div>
                         </div>
                       </div>
                     ) : (
