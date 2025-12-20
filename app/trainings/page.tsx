@@ -154,6 +154,9 @@ export default function TrainingsPage() {
   const [logCopied, setLogCopied] = useState(false);
   const [tfLogCopied, setTfLogCopied] = useState(false);
 
+  const trainingLogMarkdown = `**Task Performed: Orientation / Practical Training / Exam:**\n**Trainee's Name:**\n**Trainee's Training File:**`;
+  const tfLogMarkdown = `**Task Performed::** TF Creation/TF Closure\n**Trainee's Name:**\n**Trainee's Training File:**`;
+
   useEffect(() => {
     const fetchData = async () => {
       const supabase = createSupabaseBrowserClient();
@@ -215,7 +218,7 @@ export default function TrainingsPage() {
     return Boolean(statusTemplate);
   }, [profile, statusTemplate, memberName, selectedStatus, discord, forumLink, instructor, examResult, comments, closeReason]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!profile) return;
     if (!statusTemplate) {
       toast.error('No template found for this status');
@@ -259,9 +262,6 @@ export default function TrainingsPage() {
       toast.error('Failed to copy BBC code');
     }
   };
-
-  const trainingLogMarkdown = `**Task Performed: Orientation / Practical Training / Exam:**\n**Trainee's Name:** ${memberName || ''}\n**Trainee's Training File:**`;
-  const tfLogMarkdown = `**Task Performed::** TF Creation/TF Closure\n**Trainee's Name:** ${memberName || ''}\n**Trainee's Training File:**`;
 
   const handleCopyTrainingLog = async () => {
     try {

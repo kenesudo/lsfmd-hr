@@ -190,14 +190,12 @@ export default function ApplicationsPage() {
 
   const generateBBC = () => {
     if (!profile || !applicantName.trim()) {
-      setGeneratedBBC('');
-      return;
+      return '';
     }
 
     const template = templates.find(t => t.status === selectedStatus);
     if (!template) {
-      setGeneratedBBC('');
-      return;
+      return '';
     }
 
     let bbc = template.template_code;
@@ -205,7 +203,6 @@ export default function ApplicationsPage() {
     bbc = bbc.replace(/{{hr_rank}}/g, profile.hr_rank);
     bbc = bbc.replace(/{{hr_name}}/g, profile.full_name);
 
-    // Handle multiple reasons
     if (selectedStatus === 'on_hold' || selectedStatus === 'closed' || selectedStatus === 'denied' || selectedStatus === 'blacklisted') {
       const cleanReasons = reasons
         .map((r) => r.trim())
@@ -218,10 +215,18 @@ export default function ApplicationsPage() {
       bbc = bbc.replace(/{{reasons}}/g, reasonsList);
     }
 
-    setGeneratedBBC(bbc);
+    return bbc;
   };
 
-  const handleGenerate = generateBBC;
+  const handleGenerate = async () => {
+    const bbc = generateBBC();
+    if (!bbc) {
+      setGeneratedBBC('');
+      return;
+    }
+
+    setGeneratedBBC(bbc);
+  };
 
   const handleCopy = async () => {
     try {
@@ -235,8 +240,18 @@ export default function ApplicationsPage() {
     }
   };
 
+  const statusOptions = [
+    { value: 'pending_interview', label: 'Pending Interview' },
+    { value: 'pending_badge', label: 'Pending Badge' },
+    { value: 'hired', label: 'Hired' },
+    { value: 'on_hold', label: 'On-Hold' },
+    { value: 'closed', label: 'Closed' },
+    { value: 'denied', label: 'Denied' },
+    { value: 'blacklisted', label: 'Blacklisted' },
+  ];
+
   const logMarkdown = `**Application/Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
-  const interviewLogMarkdown = `**Application: Interview**\n**Applicant Name:**\n**Interview Result:**`;
+  const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
 
   const handleCopyLog = async () => {
     try {
@@ -349,16 +364,6 @@ export default function ApplicationsPage() {
       setReasons(reasons.filter((_, i) => i !== index));
     }
   };
-
-  const statusOptions = [
-    { value: 'pending_interview', label: 'Pending Interview' },
-    { value: 'pending_badge', label: 'Pending Badge' },
-    { value: 'hired', label: 'Hired' },
-    { value: 'on_hold', label: 'On-Hold' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'denied', label: 'Denied' },
-    { value: 'blacklisted', label: 'Blacklisted' },
-  ];
 
   const requiresReasons = ['on_hold', 'closed', 'denied', 'blacklisted'].includes(selectedStatus);
 
