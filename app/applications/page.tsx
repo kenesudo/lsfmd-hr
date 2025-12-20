@@ -220,6 +220,8 @@ export default function ApplicationsPage() {
     setGeneratedBBC(bbc);
   };
 
+  const handleGenerate = generateBBC;
+
   const handleCopy = async () => {
     try {
       if (!generatedBBC) return;
@@ -439,6 +441,14 @@ export default function ApplicationsPage() {
                       </div>
                     </div>
                   )}
+
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={!profile || templates.length === 0}
+                    className="w-full"
+                  >
+                    Generate Template
+                  </Button>
 
                   <div className="pt-4 border-t border-border">
                     <h3 className="text-lg font-semibold text-foreground mb-3">
