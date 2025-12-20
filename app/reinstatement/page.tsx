@@ -223,6 +223,8 @@ export default function ReinstatementPage() {
   const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
   const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
 
+  const showInterviewLog = selectedStatus === 'pending_exam';
+
   const handleCopyLog = async () => {
     try {
       await navigator.clipboard.writeText(logMarkdown);
@@ -388,19 +390,21 @@ export default function ReinstatementPage() {
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            <div className="flex gap-2">
-                              <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
-                                {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
-                              </Button>
-                            </div>
+                          {showInterviewLog && (
+                            <div className="space-y-3">
+                              <div className="flex gap-2">
+                                <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
+                                  {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
+                                </Button>
+                              </div>
 
-                            <div className="p-3 bg-secondary rounded-md">
-                              <div className="text-sm text-foreground overflow-x-auto">
-                                <pre className="whitespace-pre-wrap">{interviewLogMarkdown}</pre>
+                              <div className="p-3 bg-secondary rounded-md">
+                                <div className="text-sm text-foreground overflow-x-auto">
+                                  <pre className="whitespace-pre-wrap">{interviewLogMarkdown}</pre>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground">
