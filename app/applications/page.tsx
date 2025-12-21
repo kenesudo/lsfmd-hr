@@ -5,6 +5,7 @@ import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
+import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,95 +17,6 @@ function escapeHtml(input: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
-}
-
-function safeUrl(url: string) {
-  const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return '';
-}
-
-function bbcodeToHtml(bbcode: string) {
-  // Escape first, then selectively re-introduce safe HTML tags.
-  let s = escapeHtml(bbcode.trimStart());
-
-  // Basic formatting
-  s = s.replaceAll(/\[b\]/gi, '<strong>');
-  s = s.replaceAll(/\[\/b\]/gi, '</strong>');
-  s = s.replaceAll(/\[i\]/gi, '<em>');
-  s = s.replaceAll(/\[\/i\]/gi, '</em>');
-  s = s.replaceAll(/\[u\]/gi, '<u>');
-  s = s.replaceAll(/\[\/u\]/gi, '</u>');
-
-  // Alignment
-  s = s.replaceAll(/\[center\]/gi, '<div style="text-align:center">');
-  s = s.replaceAll(/\[\/center\]/gi, '</div>');
-  s = s.replaceAll(/\[left\]/gi, '<div style="text-align:left">');
-  s = s.replaceAll(/\[\/left\]/gi, '</div>');
-  s = s.replaceAll(/\[right\]/gi, '<div style="text-align:right">');
-  s = s.replaceAll(/\[indent\]/gi, '<div style="margin-left:1rem">');
-  s = s.replaceAll(/\[\/indent\]/gi, '</div>');
-
-  // Color / size
-  s = s.replaceAll(/\[color=([^\]]+)\]/gi, (_m, c) => `<span style="color:${String(c).trim()}">`);
-  s = s.replaceAll(/\[color="([^\"]+)"\]/gi, (_m, c) => `<span style="color:${String(c).trim()}">`);
-  s = s.replaceAll(/\[\/color\]/gi, '</span>');
-  s = s.replaceAll(/\[size=([^\]]+)\]/gi, (_m, sz) => {
-    const raw = String(sz).trim();
-    const n = Number(raw);
-    const px = Number.isFinite(n) ? Math.max(10, Math.min(32, n * 4 + 8)) : 14;
-    return `<span style="font-size:${px}px">`;
-  });
-  s = s.replaceAll(/\[\/size\]/gi, '</span>');
-
-  // Quote
-  s = s.replaceAll(/\[quote\]/gi, '<blockquote style="border-left:3px solid rgba(220,20,60,0.5); padding-left:12px; margin:12px 0; opacity:0.95">');
-  s = s.replaceAll(/\[\/quote\]/gi, '</blockquote>');
-
-  // Links
-  s = s.replaceAll(/\[url=([^\]]+)\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '<span>';
-    return `<a href="${safe}" target="_blank" rel="noreferrer" style="color:inherit; text-decoration:underline">`;
-  });
-  s = s.replaceAll(/\[url="([^\"]+)"\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '<span>';
-    return `<a href="${safe}" target="_blank" rel="noreferrer" style="color:inherit; text-decoration:underline">`;
-  });
-  s = s.replaceAll(/\[\/url\]/gi, '</a>');
-
-  // Images
-  s = s.replaceAll(/\[img\]([\s\S]*?)\[\/img\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '';
-    return `<img src="${safe}" alt="" style="max-width:100%; height:auto; display:block; margin:0 auto;" />`;
-  });
-
-  // Tables (ignore attributes)
-  s = s.replaceAll(/\[table[^\]]*\]/gi, '<table style="width:100%; border-collapse:collapse">');
-  s = s.replaceAll(/\[\/table\]/gi, '</table>');
-  s = s.replaceAll(/\[tr[^\]]*\]/gi, '<tr>');
-  s = s.replaceAll(/\[\/tr\]/gi, '</tr>');
-  s = s.replaceAll(/\[td[^\]]*\]/gi, '<td style="vertical-align:top">');
-  s = s.replaceAll(/\[\/td\]/gi, '</td>');
-
-  // Lists
-  s = s.replaceAll(/\[list\]/gi, '<ul style="padding-left:1.25rem; list-style:disc">');
-  s = s.replaceAll(/\[\/list\]/gi, '</ul>');
-  s = s.replaceAll(/\[\*\]\s*/g, '<li>');
-  // Close list items when encountering another [*] or [/LIST] or end (best-effort)
-  s = s.replaceAll(/(<li>[\s\S]*?)(?=<li>|<\/ul>)/g, '$1</li>');
-
-  // Newlines -> <br>
-  s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
-
-  // Clean up leading spacing and common artifacts (especially around [TABLE] blocks)
-  s = s.replace(/^(?:\s*<br \/>\s*)+/i, '');
-  s = s.replaceAll(/<br \/>\s*(?=<(?:table|tr|td|\/table|\/tr|\/td)\b)/gi, '');
-  s = s.replaceAll(/(<\/(?:td|tr|table)>)(?:\s*<br \/>\s*)+/gi, '$1');
-
-  return s;
 }
 
 function markdownToHtml(markdown: string) {
@@ -552,11 +464,9 @@ export default function ApplicationsPage() {
 
                   {generatedBBC && (
                     <div className="mt-4 p-4 bg-secondary rounded-md">
-                      <div 
+                      <div
                         className="text-sm text-foreground overflow-x-auto"
-                        dangerouslySetInnerHTML={{
-                          __html: bbcodeToHtml(generatedBBC)
-                        }}
+                        dangerouslySetInnerHTML={{ __html: renderBbcode(generatedBBC) }}
                       />
                     </div>
                   )}
