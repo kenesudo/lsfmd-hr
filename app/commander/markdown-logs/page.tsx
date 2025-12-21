@@ -11,10 +11,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 type ProcessType =
-  | 'application'
-  | 'application_interview'
-  | 'reinstatement'
-  | 'reinstatement_interview'
+  | 'application_on_hold'
+  | 'application_hired'
+  | 'application_blacklisted'
+  | 'application_closed'
+  | 'application_denied'
+  | 'application_pending_interview'
+  | 'application_pending_badge'
+  | 'reinstatement_on_hold'
+  | 'reinstatement_denied'
+  | 'reinstatement_exam_failed'
+  | 'reinstatement_pending_exam'
+  | 'reinstatement_pending_recommendations'
+  | 'reinstatement_pending_badge'
   | 'training_orientation'
   | 'training_practical'
   | 'training_exam'
@@ -30,10 +39,20 @@ type LogRow = {
 };
 
 const PROCESS_OPTIONS: { value: ProcessType; label: string }[] = [
-  { value: 'application', label: 'Application' },
-  { value: 'application_interview', label: 'Application Interview' },
-  { value: 'reinstatement', label: 'Reinstatement' },
-  { value: 'reinstatement_interview', label: 'Reinstatement Interview' },
+  { value: 'application_pending_interview', label: 'Application - Pending Interview' },
+  { value: 'application_pending_badge', label: 'Application - Pending Badge' },
+  { value: 'application_hired', label: 'Application - Hired' },
+  { value: 'application_on_hold', label: 'Application - On Hold' },
+  { value: 'application_closed', label: 'Application - Closed' },
+  { value: 'application_denied', label: 'Application - Denied' },
+  { value: 'application_blacklisted', label: 'Application - Blacklisted' },
+
+  { value: 'reinstatement_on_hold', label: 'Reinstatement - On Hold' },
+  { value: 'reinstatement_pending_recommendations', label: 'Reinstatement - Pending Recommendations' },
+  { value: 'reinstatement_pending_exam', label: 'Reinstatement - Pending Exam' },
+  { value: 'reinstatement_pending_badge', label: 'Reinstatement - Pending Badge' },
+  { value: 'reinstatement_exam_failed', label: 'Reinstatement - Exam Failed' },
+  { value: 'reinstatement_denied', label: 'Reinstatement - Denied' },
   { value: 'training_orientation', label: 'Training - Orientation' },
   { value: 'training_practical', label: 'Training - Practical' },
   { value: 'training_exam', label: 'Training - Exam' },
@@ -43,7 +62,7 @@ const PROCESS_OPTIONS: { value: ProcessType; label: string }[] = [
 ];
 
 export default function CommanderMarkdownLogsPage() {
-  const [processType, setProcessType] = useState<ProcessType>('application');
+  const [processType, setProcessType] = useState<ProcessType>('application_pending_interview');
   const [rows, setRows] = useState<LogRow[]>([]);
 
   const [content, setContent] = useState('');

@@ -413,7 +413,7 @@ export default function TrainingsPage() {
                           <Input
                             value={discord}
                             onChange={(e) => setDiscord(e.target.value)}
-                            placeholder="e.g. hrveyd_"
+                            placeholder="eg. _kenesu"
                           />
                         </div>
 
@@ -578,7 +578,7 @@ export default function TrainingsPage() {
                       <Button
                         onClick={handleGetScore}
                         disabled={!generatedBBC || saving}
-                        variant="destructive"
+                        variant="primary"
                         className="flex-1"
                       >
                         {saving ? 'Saving…' : 'Get Score'}
