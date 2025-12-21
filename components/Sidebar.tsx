@@ -65,6 +65,15 @@ export default function Sidebar() {
       ),
     },
     {
+      name: 'BBCode Previewer',
+      href: '/bbcode-previewer',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75l3 3-3 3m-10.5 0l-3-3 3-3M9 18h6" />
+        </svg>
+      ),
+    },
+    {
       name: 'Employee Profile',
       href: '/employee-profile',
       icon: (
