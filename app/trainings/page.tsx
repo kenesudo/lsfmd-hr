@@ -508,8 +508,11 @@ export default function TrainingsPage() {
                     </div>
 
                     {generatedBBC && (
-                      <div className="mt-4 p-4 bg-secondary rounded-md">
-                        <BbcodePreview html={renderBbcode(generatedBBC)} title="Training BBC preview" />
+                      <div className="mt-4 p-4 bg-secondary rounded-md h-screen">
+                        <BbcodePreview
+                          html={renderBbcode(generatedBBC)}
+                          title="Training BBC preview"
+                        />
                       </div>
                     )}
                   </div>

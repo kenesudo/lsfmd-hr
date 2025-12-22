@@ -95,9 +95,11 @@ export default function BbcodePreviewerPage() {
                   </p>
                 </div>
 
-                <div className="p-4 bg-secondary rounded-md min-h-[360px] overflow-auto">
+                <div className="p-4 bg-secondary rounded-md h-screen overflow-auto">
                   {hasContent ? (
-                    <BbcodePreview html={previewHtml} className="w-full min-h-[360px]" />
+                    <BbcodePreview
+                      html={previewHtml}
+                    />
                   ) : (
                     <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center">
                       Start typing BBCode to see the formatted result.

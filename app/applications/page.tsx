@@ -464,8 +464,11 @@ export default function ApplicationsPage() {
                   </div>
 
                   {generatedBBC && (
-                    <div className="mt-4 p-4 bg-secondary rounded-md">
-                      <BbcodePreview html={renderBbcode(generatedBBC)} title="Application BBC preview" />
+                    <div className="mt-4 p-4 bg-secondary rounded-md h-screen">
+                      <BbcodePreview
+                        html={renderBbcode(generatedBBC)}
+                        title="Application BBC preview"
+                      />
                     </div>
                   )}
                 </div>

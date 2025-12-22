@@ -374,10 +374,12 @@ export default function EmployeeProfilePage() {
 
         {creationTemplate ? (
           <>
-            <Textarea label="BBC Output" value={creationBBC} readOnly className="font-mono" rows={12} />
-            <div className="p-4 bg-secondary rounded-md min-h-[200px]">
+            <div className="p-4 bg-secondary rounded-md h-[100%]">
               {creationPreview ? (
-                <BbcodePreview html={creationPreview} title="Employee profile preview" />
+                <BbcodePreview
+                  html={creationPreview}
+                  title="Employee profile preview"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Fill out the fields to generate a live preview of the employee profile.
@@ -438,10 +440,12 @@ export default function EmployeeProfilePage() {
 
         {updateTemplate ? (
           <>
-            <Textarea label="BBC Output" value={updateBBC} readOnly className="font-mono" rows={10} />
-            <div className="p-4 bg-secondary rounded-md min-h-[200px]">
+            <div className="p-4 bg-secondary rounded-md h-screen">
               {updatePreview ? (
-                <BbcodePreview html={updatePreview} title="Employee update preview" />
+                <BbcodePreview
+                  html={updatePreview}
+                  title="Employee update preview"
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Provide the updated details to generate the preview.
