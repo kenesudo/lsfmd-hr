@@ -3,6 +3,7 @@
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 interface UserProfile {
@@ -10,6 +11,13 @@ interface UserProfile {
   username: string;
   hr_rank: string;
 }
+
+type NavItem = {
+  name: string;
+  href: string;
+  icon: ReactNode;
+  allowedRoles?: string[];
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -36,7 +44,7 @@ export default function Sidebar() {
     fetchProfile();
   }, []);
 
-  const navigation = [
+  const navigation: NavItem[] = [
     {
       name: 'Dashboard',
       href: '/dashboard',
@@ -74,6 +82,18 @@ export default function Sidebar() {
       ),
     },
     {
+      name: 'Supervision',
+      href: '/supervision',
+      allowedRoles: ['Commander', 'Assistant Commander', 'Supervisor'],
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 15.75c0 3-3.75 6-7.5 6s-7.5-3-7.5-6" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 4.5l-3 3m0 0l3 3m-3-3h-12" />
+        </svg>
+      ),
+    },
+    {
       name: 'BBCode Previewer',
       href: '/bbcode-previewer',
       icon: (
@@ -107,7 +127,13 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
+        {navigation
+          .filter((item) => {
+            if (!item.allowedRoles) return true;
+            if (!profile?.hr_rank) return false;
+            return item.allowedRoles.includes(profile.hr_rank);
+          })
+          .map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
