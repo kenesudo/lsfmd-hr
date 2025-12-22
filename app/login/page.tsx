@@ -2,6 +2,7 @@
 
 import Button from '@/components/Button';
 import Input from '@/components/Input';
+import Navbar from '@/components/Navbar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { isValidUsername, usernameToEmail } from '@/lib/username';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -86,48 +87,51 @@ function LoginForm({ next }: { next: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-card border border-border rounded-lg p-8 shadow-sm">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-foreground">Sign in</h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            Use your assigned account credentials. Registration is disabled.
-          </p>
-        </div>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-card border border-border rounded-lg p-8 shadow-sm">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-foreground">Sign in</h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Use your assigned account credentials. Registration is disabled.
+            </p>
+          </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <Input
-            label="Username"
-            autoComplete="username"
-            placeholder="your.username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
+          <form onSubmit={onSubmit} className="space-y-4">
+            <Input
+              label="Username"
+              autoComplete="username"
+              placeholder="your.username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
 
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+            <Input
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-          {error && (
-            <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">
+                {error}
+              </div>
+            )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign in'}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </form>
 
-        <div className="mt-6 text-xs text-muted-foreground">
-          If you don’t have an account, contact a Commander.
+          <div className="mt-6 text-xs text-muted-foreground">
+            If you don’t have an account, contact a Commander.
+          </div>
         </div>
       </div>
     </div>

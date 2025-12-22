@@ -29,7 +29,7 @@ export default function CommanderCreateAccountPage() {
   const [username, setUsername] = useState('');
   const [fullName, setFullName] = useState('');
   const [lsfmdRank, setLsfmdRank] = useState('');
-  const [hrRank, setHrRank] = useState('General');
+  const [hrRank, setHrRank] = useState('General Instructor');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export default function CommanderCreateAccountPage() {
       setUsername('');
       setFullName('');
       setLsfmdRank('');
-      setHrRank('General');
+      setHrRank('General Instructor');
     } finally {
       setLoading(false);
     }

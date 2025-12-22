@@ -1,9 +1,9 @@
 export const HR_ROLES = [
   'Commander',
   'Assistant Commander',
-  'Supervisor',
-  'General',
-  'Probationary',
+  'Supervisory Instructor',
+  'General Instructor',
+  'Probationary Instructor',
 ] as const;
 
 export type HrRole = (typeof HR_ROLES)[number];

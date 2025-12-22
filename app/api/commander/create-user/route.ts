@@ -13,8 +13,9 @@ type Body = {
 };
 
 const isHrRole = (value: string): value is HrRole => {
-  return (ADMIN_ROLES as readonly string[]).includes(value) ||
-    (['Supervisor', 'General', 'Probationary'] as readonly string[]).includes(value);
+  return (['Commander', 'Assistant Commander', 'Supervisory Instructor', 'General Instructor', 'Probationary Instructor'] as readonly string[]).includes(
+    value,
+  );
 };
 
 export async function POST(request: NextRequest) {

@@ -7,15 +7,18 @@ import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import {
-    buildValuesMap,
-    extractPlaceholders,
-    fillTemplate,
-    type TemplateFieldRow,
-    type TemplateRow
+  buildValuesMap,
+  extractPlaceholders,
+  fillTemplate,
+  type TemplateFieldRow,
+  type TemplateRow
 } from '@/lib/bbcTemplateRunner';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+
+let cachedTemplates: TemplateRow[] | null = null;
+let templatesInFlight: Promise<TemplateRow[]> | null = null;
 
 export type ProcessTypeOption = { value: string; label: string };
 
@@ -68,6 +71,8 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [selectedProcessType, setSelectedProcessType] = useState('');
 
+  const hasLoadedTemplatesRef = useRef(false);
+
   const [fields, setFields] = useState<TemplateFieldRow[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
 
@@ -77,39 +82,68 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
   const [copiedBBC, setCopiedBBC] = useState(false);
   const [working, setWorking] = useState(false);
 
-  useEffect(() => {
-    if (onProcessTypeChange) onProcessTypeChange(selectedProcessType);
-  }, [selectedProcessType, onProcessTypeChange]);
+  const onProcessTypeChangeRef = useRef<typeof onProcessTypeChange>(onProcessTypeChange);
+  const onGeneratedChangeRef = useRef<typeof onGeneratedChange>(onGeneratedChange);
 
   useEffect(() => {
-    if (onGeneratedChange) onGeneratedChange(generatedBBC);
-  }, [generatedBBC, onGeneratedChange]);
+    onProcessTypeChangeRef.current = onProcessTypeChange;
+  }, [onProcessTypeChange]);
 
   useEffect(() => {
+    onGeneratedChangeRef.current = onGeneratedChange;
+  }, [onGeneratedChange]);
+
+  useEffect(() => {
+    const cb = onProcessTypeChangeRef.current;
+    if (cb) cb(selectedProcessType);
+  }, [selectedProcessType]);
+
+  useEffect(() => {
+    const cb = onGeneratedChangeRef.current;
+    if (cb) cb(generatedBBC);
+  }, [generatedBBC]);
+
+  useEffect(() => {
+    if (hasLoadedTemplatesRef.current) return;
+    hasLoadedTemplatesRef.current = true;
+
+    if (cachedTemplates) {
+      setTemplates(cachedTemplates);
+      return;
+    }
+
     const load = async () => {
       setLoadingTemplates(true);
       try {
-        const supabase = createSupabaseBrowserClient();
-        const { data, error } = await supabase
-          .from('bbc_templates')
-          .select('id, process_type, template_code')
-          .order('process_type');
+        if (!templatesInFlight) {
+          templatesInFlight = (async () => {
+            const supabase = createSupabaseBrowserClient();
+            const { data, error } = await supabase
+              .from('bbc_templates')
+              .select('id, process_type, template_code')
+              .order('process_type');
 
-        if (error) {
-          toast.error(error.message || 'Failed to load BBC templates');
-          setTemplates([]);
-          setSelectedProcessType('');
-          return;
+            if (error) throw error;
+            return (data ?? []) as TemplateRow[];
+          })();
         }
 
-        const list = (data ?? []) as TemplateRow[];
+        const list = await templatesInFlight;
+        cachedTemplates = list;
         setTemplates(list);
       } finally {
+        templatesInFlight = null;
         setLoadingTemplates(false);
       }
     };
 
-    load();
+    load().catch((error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to load BBC templates');
+      cachedTemplates = null;
+      templatesInFlight = null;
+      setTemplates([]);
+      setSelectedProcessType('');
+    });
   }, []);
 
   useEffect(() => {

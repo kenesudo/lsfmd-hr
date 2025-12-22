@@ -6,7 +6,7 @@ import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 function escapeHtml(input: string) {
@@ -47,6 +47,8 @@ export default function ApplicationsPage() {
   const [logCopied, setLogCopied] = useState(false);
   const [logMarkdown, setLogMarkdown] = useState('');
   const [logLoading, setLogLoading] = useState(false);
+
+  const lastLogProcessTypeRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -110,9 +112,13 @@ export default function ApplicationsPage() {
   useEffect(() => {
     const fetchLogMarkdown = async () => {
       if (!selectedStatus) {
+        lastLogProcessTypeRef.current = null;
         setLogMarkdown('');
         return;
       }
+
+      if (lastLogProcessTypeRef.current === selectedStatus) return;
+      lastLogProcessTypeRef.current = selectedStatus;
 
       setLogLoading(true);
       try {
@@ -134,6 +140,10 @@ export default function ApplicationsPage() {
     };
 
     fetchLogMarkdown();
+  }, [selectedStatus]);
+
+  useEffect(() => {
+    setLogCopied(false);
   }, [selectedStatus]);
 
   const handleCopyLog = async () => {

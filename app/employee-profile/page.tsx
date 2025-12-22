@@ -6,7 +6,7 @@ import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 function escapeHtml(input: string) {
@@ -43,6 +43,8 @@ export default function EmployeeProfilePage() {
   const [logCopied, setLogCopied] = useState(false);
   const [logMarkdown, setLogMarkdown] = useState('');
   const [logLoading, setLogLoading] = useState(false);
+
+  const lastLogProcessTypeRef = useRef<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,9 +122,13 @@ export default function EmployeeProfilePage() {
     setLogCopied(false);
     const fetchLogMarkdown = async () => {
       if (!processType) {
+        lastLogProcessTypeRef.current = null;
         setLogMarkdown('');
         return;
       }
+
+      if (lastLogProcessTypeRef.current === processType) return;
+      lastLogProcessTypeRef.current = processType;
 
       setLogLoading(true);
       try {
