@@ -30,7 +30,11 @@ type ProcessType =
   | 'training_tf_creation'
   | 'training_tf_closure'
   | 'lr_interview'
-  | 'supervision';
+  | 'supervision'
+  | 'supervision_interview'
+  | 'supervision_orentation'
+  | 'supervision_practical'
+  | 'supervision_reinst_exam';
 
 type LogRow = {
   id: string;
@@ -61,6 +65,10 @@ const PROCESS_OPTIONS: { value: ProcessType; label: string }[] = [
   { value: 'training_tf_closure', label: 'Training File - Closure' },
   { value: 'lr_interview', label: 'LR Interview' },
   { value: 'supervision', label: 'Supervision' },
+  { value: 'supervision_interview', label: 'Supervision - Interview' },
+  { value: 'supervision_orentation', label: 'Supervision - Orentation' },
+  { value: 'supervision_practical', label: 'Supervision - Practical' },
+  { value: 'supervision_reinst_exam', label: 'Supervision - Reinst. Exam' },
 ];
 
 export default function CommanderMarkdownLogsPage() {

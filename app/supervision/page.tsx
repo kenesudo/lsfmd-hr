@@ -4,11 +4,12 @@ import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
+import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 function escapeHtml(input: string) {
@@ -46,14 +47,23 @@ Personal Evaluation:
 Note/feedback:
 Screenshots: (make sure to toggle every chat setting and send atleast 1 screenshot with /time)`;
 
-const ACTIVITY_OPTIONS = ['Interview', 'Orientation', 'Practical', 'Reinst. Exam', 'Exam'];
+const TYPE_OPTIONS = [
+  { value: 'supervision', label: 'General', activity: '' },
+  { value: 'supervision_interview', label: 'Interview', activity: 'Interview' },
+  { value: 'supervision_orentation', label: 'Orentation', activity: 'Orentation' },
+  { value: 'supervision_practical', label: 'Practical', activity: 'Practical' },
+  { value: 'supervision_reinst_exam', label: 'Reinst. Exam/exam', activity: 'Reinst. Exam/exam' },
+];
+
+const ACTIVITY_OPTIONS: string[] = ['Interview', 'Orentation', 'Practical', 'Reinst. Exam/exam'];
 
 export default function SupervisionPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [template, setTemplate] = useState<TemplateRow | null>(null);
+  const [templates, setTemplates] = useState<TemplateRow[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>(TYPE_OPTIONS[0].value);
 
   const [giName, setGiName] = useState('');
-  const [activityPerformed, setActivityPerformed] = useState<string>(ACTIVITY_OPTIONS[0]);
+  const [activityPerformed, setActivityPerformed] = useState<string>(TYPE_OPTIONS[0].activity);
   const [personalEvaluation, setPersonalEvaluation] = useState('');
   const [noteFeedback, setNoteFeedback] = useState('');
   const [screenshotsNote, setScreenshotsNote] = useState('');
@@ -69,11 +79,7 @@ export default function SupervisionPage() {
       setLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
-        const [
-          { data: authData },
-          { data: profileData },
-          { data: templateData, error: templateErr },
-        ] = await Promise.all([
+        const [{ data: authData }, { data: profileData }, { data: templateData, error: templateErr }] = await Promise.all([
           supabase.auth.getUser(),
           supabase
             .from('profiles')
@@ -98,12 +104,21 @@ export default function SupervisionPage() {
 
         if (templateErr) {
           toast.error(templateErr.message || 'Failed to load supervision templates');
-          setTemplate(null);
+          setTemplates([]);
         } else {
           const rows = (templateData ?? []) as TemplateRow[];
-          const supervisionTemplate =
-            rows.find((row) => row.status === 'supervision') ?? rows[0] ?? null;
-          setTemplate(supervisionTemplate ?? null);
+          setTemplates(rows);
+
+          if (rows.length) {
+            const availableOption =
+              TYPE_OPTIONS.find((option) => rows.some((row) => row.status === option.value)) ?? null;
+            if (availableOption) {
+              setSelectedStatus(availableOption.value);
+              setActivityPerformed(availableOption.activity);
+            } else {
+              setSelectedStatus(rows[0].status);
+            }
+          }
         }
       } finally {
         setLoading(false);
@@ -113,23 +128,33 @@ export default function SupervisionPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (selectedStatus === 'supervision') return;
+    const match = TYPE_OPTIONS.find((option) => option.value === selectedStatus);
+    setActivityPerformed(match?.activity ?? '');
+  }, [selectedStatus]);
+
+  const selectedTemplate = useMemo(() => {
+    return templates.find((template) => template.status === selectedStatus) ?? null;
+  }, [templates, selectedStatus]);
+
   const canGenerate = Boolean(
     profile &&
-      template &&
+      selectedTemplate &&
       giName.trim() &&
-      activityPerformed.trim() &&
+      (selectedStatus === 'supervision' ? activityPerformed.trim() : true) &&
       personalEvaluation.trim() &&
       noteFeedback.trim() &&
       screenshotsNote.trim(),
   );
 
   const generateTemplate = () => {
-    if (!profile || !template) {
+    if (!profile || !selectedTemplate) {
       toast.error('Missing template or profile data.');
       return;
     }
 
-    let bbc = template.template_code;
+    let bbc = selectedTemplate.template_code;
     bbc = bbc.replace(/{{member_name}}/g, giName.trim());
     bbc = bbc.replace(/{{hr_name}}/g, profile.full_name);
     bbc = bbc.replace(/{{hr_rank}}/g, profile.hr_rank);
@@ -167,7 +192,8 @@ export default function SupervisionPage() {
 
   const resetForm = () => {
     setGiName('');
-    setActivityPerformed(ACTIVITY_OPTIONS[0]);
+    const defaultOption = TYPE_OPTIONS.find((option) => option.value === selectedStatus);
+    setActivityPerformed(defaultOption?.activity ?? '');
     setPersonalEvaluation('');
     setNoteFeedback('');
     setScreenshotsNote('');
@@ -232,6 +258,19 @@ export default function SupervisionPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4 space-y-5">
                 <div className="space-y-4">
+                  <Select
+                    label="Session Type"
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    options={templates.map((template) => {
+                      const match = TYPE_OPTIONS.find((option) => option.value === template.status);
+                      return {
+                        value: template.status,
+                        label: match?.label ?? template.status,
+                      };
+                    })}
+                  />
+
                   <Input
                     label="GI/PI's name"
                     placeholder="Enter GI/PI's full name"
