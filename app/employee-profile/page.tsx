@@ -125,7 +125,7 @@ export default function EmployeeProfilePage() {
                     const { error } = await supabase.from('hr_activities').insert({
                       hr_id: user.id,
                       bbc_content: generatedBBC,
-                      activity_type: 'personnel_profile_processed',
+                      activity_type: templateGroup,
                     });
 
                     if (error) {

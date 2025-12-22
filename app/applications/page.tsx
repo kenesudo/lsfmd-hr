@@ -5,6 +5,7 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
+import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -35,20 +36,20 @@ interface UserProfile {
 }
 
 type ApplicationStatus =
-  | 'pending_interview'
-  | 'pending_badge'
-  | 'hired'
-  | 'on_hold'
-  | 'closed'
-  | 'denied'
-  | 'blacklisted';
+  | 'application_pending_interview'
+  | 'application_pending_badge'
+  | 'application_hired'
+  | 'application_on_hold'
+  | 'application_closed'
+  | 'application_denied'
+  | 'application_blacklisted';
 
 export default function ApplicationsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [autoFillHr, setAutoFillHr] = useState(true);
   const [generatedBBC, setGeneratedBBC] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('pending_interview');
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('application_pending_interview');
   const [saving, setSaving] = useState(false);
 
   const [logCopied, setLogCopied] = useState(false);
@@ -77,16 +78,16 @@ export default function ApplicationsPage() {
   }, []);
 
   const statusOptions: StatusOption[] = [
-    { value: 'pending_interview', label: 'Pending Interview' },
-    { value: 'pending_badge', label: 'Pending Badge' },
-    { value: 'hired', label: 'Hired' },
-    { value: 'on_hold', label: 'On-Hold' },
-    { value: 'closed', label: 'Closed' },
-    { value: 'denied', label: 'Denied' },
-    { value: 'blacklisted', label: 'Blacklisted' },
+    { value: 'application_pending_interview', label: PROCESS_LABELS.get('application_pending_interview' as ProcessType) ?? 'Application - Pending Interview' },
+    { value: 'application_pending_badge', label: PROCESS_LABELS.get('application_pending_badge' as ProcessType) ?? 'Application - Pending Badge' },
+    { value: 'application_hired', label: PROCESS_LABELS.get('application_hired' as ProcessType) ?? 'Application - Hired' },
+    { value: 'application_on_hold', label: PROCESS_LABELS.get('application_on_hold' as ProcessType) ?? 'Application - On Hold' },
+    { value: 'application_closed', label: PROCESS_LABELS.get('application_closed' as ProcessType) ?? 'Application - Closed' },
+    { value: 'application_denied', label: PROCESS_LABELS.get('application_denied' as ProcessType) ?? 'Application - Denied' },
+    { value: 'application_blacklisted', label: PROCESS_LABELS.get('application_blacklisted' as ProcessType) ?? 'Application - Blacklisted' },
   ];
 
-  const showInterviewLog = selectedStatus === 'pending_interview';
+  const showInterviewLog = selectedStatus === 'application_pending_interview';
 
   const logMarkdown = `**Application/Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
   const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
@@ -166,7 +167,7 @@ export default function ApplicationsPage() {
                   const { error } = await supabase.from('hr_activities').insert({
                     hr_id: user.id,
                     bbc_content: generatedBBC,
-                    activity_type: 'application_response',
+                    activity_type: selectedStatus,
                   });
 
                   if (error) {

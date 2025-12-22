@@ -5,6 +5,7 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
+import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -25,26 +26,46 @@ type UserProfile = {
 };
 
 type ReinstatementStatus =
-  | 'on_hold'
-  | 'pending_recommendations'
-  | 'pending_exam'
-  | 'pending_badge'
-  | 'exam_failed'
-  | 'denied';
+  | 'reinstatement_on_hold'
+  | 'reinstatement_pending_recommendations'
+  | 'reinstatement_pending_exam'
+  | 'reinstatement_pending_badge'
+  | 'reinstatement_exam_failed'
+  | 'reinstatement_denied';
 
 const STATUS_OPTIONS: StatusOption[] = [
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'pending_recommendations', label: 'Pending Recommendations' },
-  { value: 'pending_exam', label: 'Pending Reinstatement Exam' },
-  { value: 'pending_badge', label: 'Pending Badge' },
-  { value: 'exam_failed', label: 'Failed Reinstatement Exam' },
-  { value: 'denied', label: 'Denied' },
+  {
+    value: 'reinstatement_on_hold',
+    label: PROCESS_LABELS.get('reinstatement_on_hold' as ProcessType) ?? 'Reinstatement - On Hold',
+  },
+  {
+    value: 'reinstatement_pending_recommendations',
+    label:
+      PROCESS_LABELS.get('reinstatement_pending_recommendations' as ProcessType) ??
+      'Reinstatement - Pending Recommendations',
+  },
+  {
+    value: 'reinstatement_pending_exam',
+    label: PROCESS_LABELS.get('reinstatement_pending_exam' as ProcessType) ?? 'Reinstatement - Pending Exam',
+  },
+  {
+    value: 'reinstatement_pending_badge',
+    label: PROCESS_LABELS.get('reinstatement_pending_badge' as ProcessType) ?? 'Reinstatement - Pending Badge',
+  },
+  {
+    value: 'reinstatement_exam_failed',
+    label: PROCESS_LABELS.get('reinstatement_exam_failed' as ProcessType) ?? 'Reinstatement - Exam Failed',
+  },
+  {
+    value: 'reinstatement_denied',
+    label: PROCESS_LABELS.get('reinstatement_denied' as ProcessType) ?? 'Reinstatement - Denied',
+  },
 ];
 
 export default function ReinstatementPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<ReinstatementStatus>('on_hold');
+  const [selectedStatus, setSelectedStatus] = useState<ReinstatementStatus>('reinstatement_on_hold');
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [saving, setSaving] = useState(false);
   const [logCopied, setLogCopied] = useState(false);
@@ -74,7 +95,7 @@ export default function ReinstatementPage() {
   const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
   const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
 
-  const showInterviewLog = selectedStatus === 'pending_exam';
+  const showInterviewLog = selectedStatus === 'reinstatement_pending_exam';
 
   const handleCopyLog = async () => {
     try {
@@ -150,7 +171,7 @@ export default function ReinstatementPage() {
                     const { error } = await supabase.from('hr_activities').insert({
                       hr_id: user.id,
                       bbc_content: generatedBBC,
-                      activity_type: 'reinstatement_exam',
+                      activity_type: selectedStatus,
                     });
 
                     if (error) {

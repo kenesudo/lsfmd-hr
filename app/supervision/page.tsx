@@ -32,29 +32,32 @@ type UserProfile = {
   hr_rank: string;
 };
 
-const SUPERVISION_LOG_TEMPLATE = `GI/PI's name:
-Activity they have performed: (Interview, Orentation, Practical, Reinst. Exam/exam)
-Personal Evaluation:
-Note/feedback:
-Screenshots: (make sure to toggle every chat setting and send atleast 1 screenshot with /time)`;
+type SupervisionStatus =
+  | 'supervision'
+  | 'supervision_interview'
+  | 'supervision_orentation'
+  | 'supervision_practical'
+  | 'supervision_reinstatement_exam'
+  | 'supervision_exam';
 
-const TYPE_OPTIONS = [
-  { value: 'supervision', label: 'General', activity: '' },
-  { value: 'supervision_interview', label: 'Interview', activity: 'Interview' },
-  { value: 'supervision_orentation', label: 'Orentation', activity: 'Orentation' },
-  { value: 'supervision_practical', label: 'Practical', activity: 'Practical' },
-  { value: 'supervision_reinst_exam', label: 'Reinst. Exam/exam', activity: 'Reinst. Exam/exam' },
+const STATUS_OPTIONS: StatusOption[] = [
+  { value: 'supervision', label: 'General' },
+  { value: 'supervision_interview', label: 'Interview' },
+  { value: 'supervision_orentation', label: 'Orentation' },
+  { value: 'supervision_practical', label: 'Practical' },
+  { value: 'supervision_reinstatement_exam', label: 'Reinstatement Exam' },
+  { value: 'supervision_exam', label: 'Exam' },
 ];
-
-const STATUS_OPTIONS: StatusOption[] = TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
 
 export default function SupervisionPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<string>(TYPE_OPTIONS[0].value);
+  const [selectedStatus, setSelectedStatus] = useState<SupervisionStatus>('supervision');
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [copiedLog, setCopiedLog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [logMarkdown, setLogMarkdown] = useState('');
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -77,9 +80,38 @@ export default function SupervisionPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    const fetchLogMarkdown = async () => {
+      setLogLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('log_markdowns')
+          .select('content')
+          .eq('process_type', selectedStatus)
+          .maybeSingle();
+
+        if (error) throw error;
+        setLogMarkdown(data?.content ?? '');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load log markdown');
+        setLogMarkdown('');
+      } finally {
+        setLogLoading(false);
+      }
+    };
+
+    fetchLogMarkdown();
+  }, [selectedStatus]);
+
   const handleCopyLog = async () => {
+    if (!logMarkdown) {
+      toast.error('No log markdown available for this session type');
+      return;
+    }
+
     try {
-      await navigator.clipboard.writeText(SUPERVISION_LOG_TEMPLATE);
+      await navigator.clipboard.writeText(logMarkdown);
       setCopiedLog(true);
       setTimeout(() => setCopiedLog(false), 2000);
       toast.success('Log markdown copied');
@@ -125,7 +157,7 @@ export default function SupervisionPage() {
               statusLabel="Session Type"
               statusOptions={STATUS_OPTIONS}
               providedValues={providedValues}
-              onStatusChange={(status) => setSelectedStatus(status)}
+              onStatusChange={(status) => setSelectedStatus(status as SupervisionStatus)}
               onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
               primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
               onPrimaryAction={async ({ generatedBBC }) => {
@@ -144,7 +176,7 @@ export default function SupervisionPage() {
                   const { error } = await supabase.from('hr_activities').insert({
                     hr_id: user.id,
                     bbc_content: generatedBBC,
-                    activity_type: 'supervision',
+                    activity_type: selectedStatus,
                   });
 
                   if (error) {
@@ -164,14 +196,20 @@ export default function SupervisionPage() {
 
             <div className="mt-6 bg-card border border-border rounded-lg p-6">
               <h2 className="text-xl font-semibold text-foreground mb-4">Log Markdown</h2>
-              <Button onClick={handleCopyLog} variant="outline" className="w-full">
+              <Button onClick={handleCopyLog} variant="outline" className="w-full" disabled={logLoading || !logMarkdown}>
                 {copiedLog ? '✓ Copied!' : 'Copy Log Markdown'}
               </Button>
               <div className="mt-3 p-3 bg-secondary rounded-md">
-                <div
-                  className="text-sm text-foreground whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: markdownToHtml(SUPERVISION_LOG_TEMPLATE) }}
-                />
+                {logLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading log markdown…</p>
+                ) : logMarkdown ? (
+                  <div
+                    className="text-sm text-foreground whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No markdown found for this session type.</p>
+                )}
               </div>
             </div>
           </div>

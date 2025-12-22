@@ -162,6 +162,8 @@ CREATE TABLE public.log_markdowns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   process_type TEXT NOT NULL CHECK (
     process_type IN (
+      'employee_profile_creation',
+      'employee_profile_update',
       'application_on_hold',
       'application_hired',
       'application_blacklisted',
@@ -175,7 +177,6 @@ CREATE TABLE public.log_markdowns (
       'reinstatement_pending_exam',
       'reinstatement_pending_recommendations',
       'reinstatement_pending_badge',
-      'reinstatement_interview',
       'training_orientation',
       'training_practical',
       'training_exam',
@@ -186,6 +187,8 @@ CREATE TABLE public.log_markdowns (
       'supervision_interview',
       'supervision_orentation',
       'supervision_practical',
+      'supervision_reinstatement_exam',
+      'supervision_exam',
       'supervision_reinst_exam'
     )
   ),
@@ -229,6 +232,51 @@ CREATE TABLE IF NOT EXISTS public.hr_activities_type (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+INSERT INTO public.hr_activities_type (key, score)
+VALUES
+  ('employee_profile_creation', (floor(random() * 3) + 1)::int),
+  ('employee_profile_update', (floor(random() * 3) + 1)::int),
+
+  ('application_pending_interview', (floor(random() * 3) + 1)::int),
+  ('application_pending_badge', (floor(random() * 3) + 1)::int),
+  ('application_hired', (floor(random() * 3) + 1)::int),
+  ('application_on_hold', (floor(random() * 3) + 1)::int),
+  ('application_closed', (floor(random() * 3) + 1)::int),
+  ('application_denied', (floor(random() * 3) + 1)::int),
+  ('application_blacklisted', (floor(random() * 3) + 1)::int),
+
+  ('reinstatement_on_hold', (floor(random() * 3) + 1)::int),
+  ('reinstatement_pending_recommendations', (floor(random() * 3) + 1)::int),
+  ('reinstatement_pending_exam', (floor(random() * 3) + 1)::int),
+  ('reinstatement_pending_badge', (floor(random() * 3) + 1)::int),
+  ('reinstatement_exam_failed', (floor(random() * 3) + 1)::int),
+  ('reinstatement_denied', (floor(random() * 3) + 1)::int),
+
+  ('training_orientation', (floor(random() * 3) + 1)::int),
+  ('training_practical', (floor(random() * 3) + 1)::int),
+  ('training_exam', (floor(random() * 3) + 1)::int),
+  ('training_tf_creation', (floor(random() * 3) + 1)::int),
+  ('training_tf_closure', (floor(random() * 3) + 1)::int),
+
+  ('lr_interview', (floor(random() * 3) + 1)::int),
+
+  ('supervision', (floor(random() * 3) + 1)::int),
+  ('supervision_interview', (floor(random() * 3) + 1)::int),
+  ('supervision_orentation', (floor(random() * 3) + 1)::int),
+  ('supervision_practical', (floor(random() * 3) + 1)::int),
+  ('supervision_reinstatement_exam', (floor(random() * 3) + 1)::int),
+  ('supervision_exam', (floor(random() * 3) + 1)::int),
+
+  ('application_response', (floor(random() * 3) + 1)::int),
+  ('reinstatement_exam', (floor(random() * 3) + 1)::int),
+  ('training', (floor(random() * 3) + 1)::int),
+  ('training_file_creation', (floor(random() * 3) + 1)::int),
+  ('training_file_closure', (floor(random() * 3) + 1)::int),
+  ('personnel_profile_processed', (floor(random() * 3) + 1)::int),
+  ('supervision_reinst_exam', (floor(random() * 3) + 1)::int)
+ON CONFLICT (key) DO UPDATE
+SET score = EXCLUDED.score;
+
 CREATE TABLE IF NOT EXISTS public.hr_activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   hr_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -240,6 +288,83 @@ CREATE TABLE IF NOT EXISTS public.hr_activities (
   reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   deny_reason TEXT
 );
+
+-- Canonicalize BBC template statuses to match canonical process keys
+UPDATE public.bbc_templates
+SET status = 'application_pending_interview'
+WHERE template_group = 'application' AND status = 'pending_interview';
+
+UPDATE public.bbc_templates
+SET status = 'application_pending_badge'
+WHERE template_group = 'application' AND status = 'pending_badge';
+
+UPDATE public.bbc_templates
+SET status = 'application_hired'
+WHERE template_group = 'application' AND status = 'hired';
+
+UPDATE public.bbc_templates
+SET status = 'application_on_hold'
+WHERE template_group = 'application' AND status = 'on_hold';
+
+UPDATE public.bbc_templates
+SET status = 'application_closed'
+WHERE template_group = 'application' AND status = 'closed';
+
+UPDATE public.bbc_templates
+SET status = 'application_denied'
+WHERE template_group = 'application' AND status = 'denied';
+
+UPDATE public.bbc_templates
+SET status = 'application_blacklisted'
+WHERE template_group = 'application' AND status = 'blacklisted';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_on_hold'
+WHERE template_group = 'reinstatement' AND status = 'on_hold';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_pending_recommendations'
+WHERE template_group = 'reinstatement' AND status = 'pending_recommendations';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_pending_exam'
+WHERE template_group = 'reinstatement' AND status = 'pending_exam';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_pending_badge'
+WHERE template_group = 'reinstatement' AND status = 'pending_badge';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_exam_failed'
+WHERE template_group = 'reinstatement' AND status = 'exam_failed';
+
+UPDATE public.bbc_templates
+SET status = 'reinstatement_denied'
+WHERE template_group = 'reinstatement' AND status = 'denied';
+
+UPDATE public.bbc_templates
+SET status = 'training_tf_creation'
+WHERE template_group = 'trainings' AND status IN ('creation', 'reopen');
+
+UPDATE public.bbc_templates
+SET status = 'training_tf_closure'
+WHERE template_group = 'trainings' AND status = 'close';
+
+UPDATE public.bbc_templates
+SET status = 'training_orientation'
+WHERE template_group = 'trainings' AND status = 'training_orientation';
+
+UPDATE public.bbc_templates
+SET status = 'training_practical'
+WHERE template_group = 'trainings' AND status = 'training_practical';
+
+UPDATE public.bbc_templates
+SET status = 'training_exam'
+WHERE template_group = 'trainings' AND status = 'exam';
+
+UPDATE public.bbc_templates
+SET status = 'training_orientation'
+WHERE template_group = 'trainings' AND status = 'training';
 
 ALTER TABLE public.hr_activities_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.hr_activities ENABLE ROW LEVEL SECURITY;

@@ -6,35 +6,10 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
+import { PROCESS_OPTIONS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-
-type ProcessType =
-  | 'application_on_hold'
-  | 'application_hired'
-  | 'application_blacklisted'
-  | 'application_closed'
-  | 'application_denied'
-  | 'application_pending_interview'
-  | 'application_pending_badge'
-  | 'reinstatement_on_hold'
-  | 'reinstatement_denied'
-  | 'reinstatement_exam_failed'
-  | 'reinstatement_pending_exam'
-  | 'reinstatement_pending_recommendations'
-  | 'reinstatement_pending_badge'
-  | 'training_orientation'
-  | 'training_practical'
-  | 'training_exam'
-  | 'training_tf_creation'
-  | 'training_tf_closure'
-  | 'lr_interview'
-  | 'supervision'
-  | 'supervision_interview'
-  | 'supervision_orentation'
-  | 'supervision_practical'
-  | 'supervision_reinst_exam';
 
 type LogRow = {
   id: string;
@@ -43,33 +18,7 @@ type LogRow = {
   created_at: string;
 };
 
-const PROCESS_OPTIONS: { value: ProcessType; label: string }[] = [
-  { value: 'application_pending_interview', label: 'Application - Pending Interview' },
-  { value: 'application_pending_badge', label: 'Application - Pending Badge' },
-  { value: 'application_hired', label: 'Application - Hired' },
-  { value: 'application_on_hold', label: 'Application - On Hold' },
-  { value: 'application_closed', label: 'Application - Closed' },
-  { value: 'application_denied', label: 'Application - Denied' },
-  { value: 'application_blacklisted', label: 'Application - Blacklisted' },
-
-  { value: 'reinstatement_on_hold', label: 'Reinstatement - On Hold' },
-  { value: 'reinstatement_pending_recommendations', label: 'Reinstatement - Pending Recommendations' },
-  { value: 'reinstatement_pending_exam', label: 'Reinstatement - Pending Exam' },
-  { value: 'reinstatement_pending_badge', label: 'Reinstatement - Pending Badge' },
-  { value: 'reinstatement_exam_failed', label: 'Reinstatement - Exam Failed' },
-  { value: 'reinstatement_denied', label: 'Reinstatement - Denied' },
-  { value: 'training_orientation', label: 'Training - Orientation' },
-  { value: 'training_practical', label: 'Training - Practical' },
-  { value: 'training_exam', label: 'Training - Exam' },
-  { value: 'training_tf_creation', label: 'Training File - Creation' },
-  { value: 'training_tf_closure', label: 'Training File - Closure' },
-  { value: 'lr_interview', label: 'LR Interview' },
-  { value: 'supervision', label: 'Supervision' },
-  { value: 'supervision_interview', label: 'Supervision - Interview' },
-  { value: 'supervision_orentation', label: 'Supervision - Orentation' },
-  { value: 'supervision_practical', label: 'Supervision - Practical' },
-  { value: 'supervision_reinst_exam', label: 'Supervision - Reinst. Exam' },
-];
+const PROCESS_SELECT_OPTIONS = [...PROCESS_OPTIONS];
 
 export default function CommanderMarkdownLogsPage() {
   const [processType, setProcessType] = useState<ProcessType>('application_pending_interview');
@@ -175,7 +124,7 @@ export default function CommanderMarkdownLogsPage() {
                   label="Process Type"
                   value={processType}
                   onChange={(e) => setProcessType(e.target.value as ProcessType)}
-                  options={PROCESS_OPTIONS}
+                  options={PROCESS_SELECT_OPTIONS}
                 />
 
                 <Input

@@ -5,6 +5,7 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
+import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -15,21 +16,41 @@ type UserProfile = {
   hr_rank: string;
 };
 
-type TrainingStatus = 'creation' | 'training' | 'exam' | 'close' | 'reopen';
+type TrainingStatus =
+  | 'training_tf_creation'
+  | 'training_orientation'
+  | 'training_practical'
+  | 'training_exam'
+  | 'training_tf_closure';
 
 const STATUS_OPTIONS: StatusOption[] = [
-  { value: 'creation', label: 'Creation' },
-  { value: 'training', label: 'Training' },
-  { value: 'exam', label: 'Exam' },
-  { value: 'close', label: 'Close' },
-  { value: 'reopen', label: 'Reopen' },
+  {
+    value: 'training_tf_creation',
+    label: PROCESS_LABELS.get('training_tf_creation' as ProcessType) ?? 'Training File - Creation',
+  },
+  {
+    value: 'training_orientation',
+    label: PROCESS_LABELS.get('training_orientation' as ProcessType) ?? 'Training - Orientation',
+  },
+  {
+    value: 'training_practical',
+    label: PROCESS_LABELS.get('training_practical' as ProcessType) ?? 'Training - Practical',
+  },
+  {
+    value: 'training_exam',
+    label: PROCESS_LABELS.get('training_exam' as ProcessType) ?? 'Training - Exam',
+  },
+  {
+    value: 'training_tf_closure',
+    label: PROCESS_LABELS.get('training_tf_closure' as ProcessType) ?? 'Training File - Closure',
+  },
 ];
 
 export default function TrainingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
 
-  const [selectedStatus, setSelectedStatus] = useState<TrainingStatus>('creation');
+  const [selectedStatus, setSelectedStatus] = useState<TrainingStatus>('training_tf_creation');
 
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [saving, setSaving] = useState(false);
@@ -132,17 +153,10 @@ export default function TrainingsPage() {
                       return;
                     }
 
-                    const activityType =
-                      selectedStatus === 'close'
-                        ? 'training_file_closure'
-                        : selectedStatus === 'creation' || selectedStatus === 'reopen'
-                          ? 'training_file_creation'
-                          : 'training';
-
                     const { error } = await supabase.from('hr_activities').insert({
                       hr_id: user.id,
                       bbc_content: generatedBBC,
-                      activity_type: activityType,
+                      activity_type: selectedStatus,
                     });
 
                     if (error) {
