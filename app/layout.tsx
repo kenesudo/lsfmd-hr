@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HR Templates - Professional Document Generation",
-  description: "Streamline your HR processes with professional template generation and document management",
+  title: "LSFMD Human Resources",
+  description: "LSFMD Human Resources Tracker System",
 };
 
 export default function RootLayout({

@@ -235,10 +235,10 @@ export default function Sidebar() {
       <div className="flex items-center h-16 px-6 border-b border-border">
         <div className="flex items-center space-x-3">
           <div className="h-9 w-9 rounded-lg overflow-hidden border border-border bg-muted">
-            <Image src="/hr-logo.svg" alt="HR" width={36} height={36} />
+            <Image src="/hr-logo.png" alt="HR" width={36} height={36} />
           </div>
           <span className="text-lg font-semibold text-foreground">
-            HR Templates
+            LSFMD HR
           </span>
         </div>
       </div>

@@ -12,11 +12,9 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <span className="text-white font-bold text-xl">HR</span>
-              </div>
+              <img src="/hr-logo.png" alt="LSFMD HR" className="h-10 w-10" />
               <span className="text-xl font-semibold text-foreground">
-                HR Templates
+                LSFMD HR
               </span>
             </Link>
           </div>
@@ -30,22 +28,10 @@ export default function Navbar() {
                 Dashboard
               </Link>
               <Link
-                href="/templates"
-                className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                href="/login"
+                className="rounded-md px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors"
               >
-                Templates
-              </Link>
-              <Link
-                href="/documents"
-                className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              >
-                Documents
-              </Link>
-              <Link
-                href="/settings"
-                className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-              >
-                Settings
+                Login
               </Link>
             </div>
           </div>
@@ -103,22 +89,10 @@ export default function Navbar() {
               Dashboard
             </Link>
             <Link
-              href="/templates"
+              href="/login"
               className="block rounded-md px-3 py-2 text-base font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
-              Templates
-            </Link>
-            <Link
-              href="/documents"
-              className="block rounded-md px-3 py-2 text-base font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              Documents
-            </Link>
-            <Link
-              href="/settings"
-              className="block rounded-md px-3 py-2 text-base font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
-            >
-              Settings
+              Login
             </Link>
           </div>
         </div>
