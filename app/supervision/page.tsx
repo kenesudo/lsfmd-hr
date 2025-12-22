@@ -3,7 +3,7 @@
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
+import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
@@ -40,7 +40,7 @@ type SupervisionStatus =
   | 'supervision_reinstatement_exam'
   | 'supervision_exam';
 
-const STATUS_OPTIONS: StatusOption[] = [
+const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
   { value: 'supervision', label: 'General' },
   { value: 'supervision_interview', label: 'Interview' },
   { value: 'supervision_orentation', label: 'Orentation' },
@@ -150,14 +150,13 @@ export default function SupervisionPage() {
             </div>
 
             <DynamicBbcTemplateRunner
-              templateGroup="supervision"
-              title="Inputs"
-              description="Fields are defined in the BBC Templates editor."
-              initialStatus={selectedStatus}
-              statusLabel="Session Type"
-              statusOptions={STATUS_OPTIONS}
+              title="Session Details"
+              description="Fill the inputs below. Fields are defined in the BBC Templates editor."
+              initialProcessType={selectedStatus}
+              processTypeLabel="Session Type"
+              processTypeOptions={PROCESS_TYPE_OPTIONS}
               providedValues={providedValues}
-              onStatusChange={(status) => setSelectedStatus(status as SupervisionStatus)}
+              onProcessTypeChange={(processType) => setSelectedStatus(processType as SupervisionStatus)}
               onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
               primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
               onPrimaryAction={async ({ generatedBBC }) => {

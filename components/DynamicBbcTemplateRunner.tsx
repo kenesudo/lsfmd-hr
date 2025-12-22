@@ -7,39 +7,30 @@ import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import {
-  buildValuesMap,
-  extractPlaceholders,
-  fillTemplate,
-  type TemplateFieldRow,
-  type TemplateRow
+    buildValuesMap,
+    extractPlaceholders,
+    fillTemplate,
+    type TemplateFieldRow,
+    type TemplateRow
 } from '@/lib/bbcTemplateRunner';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-type TemplateGroup =
-  | 'application'
-  | 'reinstatement'
-  | 'trainings'
-  | 'employee_profile_creation'
-  | 'employee_profile_update'
-  | 'supervision';
-
-export type StatusOption = { value: string; label: string };
+export type ProcessTypeOption = { value: string; label: string };
 
 type DynamicBbcTemplateRunnerProps = {
-  templateGroup: TemplateGroup;
   title: string;
   description?: string;
 
-  initialStatus?: string;
-  statusLabel?: string;
-  statusOptions?: StatusOption[];
+  initialProcessType?: string;
+  processTypeLabel?: string;
+  processTypeOptions?: ProcessTypeOption[];
 
   providedValues?: Record<string, string>;
 
   onGeneratedChange?: (generatedBBC: string) => void;
-  onStatusChange?: (status: string) => void;
+  onProcessTypeChange?: (processType: string) => void;
 
   primaryActionLabel?: string;
   onPrimaryAction?: (params: { generatedBBC: string; template: TemplateRow; inputValues: Record<string, string> }) => Promise<void>;
@@ -61,22 +52,21 @@ const buildDefaultForField = (field: TemplateFieldRow) => {
 
 export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunnerProps) {
   const {
-    templateGroup,
     title,
     description,
-    initialStatus,
-    statusLabel = 'Status',
-    statusOptions,
+    initialProcessType,
+    processTypeLabel = 'Process Type',
+    processTypeOptions,
     providedValues,
     onGeneratedChange,
-    onStatusChange,
+    onProcessTypeChange,
     primaryActionLabel = 'Save Activity',
     onPrimaryAction,
   } = props;
 
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedProcessType, setSelectedProcessType] = useState('');
 
   const [fields, setFields] = useState<TemplateFieldRow[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
@@ -88,8 +78,8 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
-    if (onStatusChange) onStatusChange(selectedStatus);
-  }, [selectedStatus, onStatusChange]);
+    if (onProcessTypeChange) onProcessTypeChange(selectedProcessType);
+  }, [selectedProcessType, onProcessTypeChange]);
 
   useEffect(() => {
     if (onGeneratedChange) onGeneratedChange(generatedBBC);
@@ -102,14 +92,13 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
           .from('bbc_templates')
-          .select('id, status, template_code')
-          .eq('template_group', templateGroup)
-          .order('status');
+          .select('id, process_type, template_code')
+          .order('process_type');
 
         if (error) {
           toast.error(error.message || 'Failed to load BBC templates');
           setTemplates([]);
-          setSelectedStatus('');
+          setSelectedProcessType('');
           return;
         }
 
@@ -121,32 +110,35 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
     };
 
     load();
-  }, [templateGroup]);
+  }, []);
 
   useEffect(() => {
     if (!templates.length) return;
 
-    setSelectedStatus((prev) => {
+    setSelectedProcessType((prev) => {
       if (prev) return prev;
-      const defaultStatus = templates[0]?.status ?? '';
-      return defaultStatus;
+      const firstFromProp = typeof initialProcessType === 'string' ? initialProcessType : '';
+      if (firstFromProp) return firstFromProp;
+      const firstFromOptions = processTypeOptions?.[0]?.value ?? '';
+      if (firstFromOptions) return firstFromOptions;
+      const firstFromTemplates = templates[0]?.process_type ?? '';
+      return firstFromTemplates;
     });
-  }, [templates]);
+  }, [templates, initialProcessType, processTypeOptions]);
 
   useEffect(() => {
-    if (!initialStatus) return;
-    if (!templates.some((t) => t.status === initialStatus)) return;
-    setSelectedStatus((prev) => (prev === initialStatus ? prev : initialStatus));
-  }, [initialStatus, templates]);
+    if (!initialProcessType) return;
+    setSelectedProcessType((prev) => (prev === initialProcessType ? prev : initialProcessType));
+  }, [initialProcessType]);
 
   const selectedTemplate = useMemo(() => {
-    return templates.find((t) => t.status === selectedStatus) ?? null;
-  }, [templates, selectedStatus]);
+    return templates.find((t) => t.process_type === selectedProcessType) ?? null;
+  }, [templates, selectedProcessType]);
 
-  const effectiveStatusOptions: StatusOption[] = useMemo(() => {
-    if (statusOptions && statusOptions.length) return statusOptions;
-    return templates.map((t) => ({ value: t.status, label: t.status }));
-  }, [statusOptions, templates]);
+  const effectiveProcessTypeOptions: ProcessTypeOption[] = useMemo(() => {
+    if (processTypeOptions && processTypeOptions.length) return processTypeOptions;
+    return templates.map((t) => ({ value: t.process_type, label: t.process_type }));
+  }, [processTypeOptions, templates]);
 
   const placeholders = useMemo(() => {
     if (!selectedTemplate) return [];
@@ -324,15 +316,24 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
         </div>
 
         <div className="space-y-4">
-          <Select
-            label={statusLabel}
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            options={effectiveStatusOptions}
-            disabled={loadingTemplates || effectiveStatusOptions.length === 0}
-          />
+          {effectiveProcessTypeOptions.length ? (
+            <Select
+              label={processTypeLabel}
+              value={selectedProcessType}
+              onChange={(e) => setSelectedProcessType(e.target.value)}
+              options={effectiveProcessTypeOptions}
+              disabled={loadingTemplates || effectiveProcessTypeOptions.length === 0}
+            />
+          ) : null}
 
           {loadingFields ? <p className="text-sm text-muted-foreground">Loading fields…</p> : null}
+
+          {selectedProcessType && !selectedTemplate && !loadingTemplates ? (
+            <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">
+              No BBC template exists yet for:
+              <div className="mt-2 font-mono text-xs whitespace-pre-wrap">{selectedProcessType}</div>
+            </div>
+          ) : null}
 
           {missingFieldKeys.length ? (
             <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">

@@ -3,7 +3,7 @@
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
+import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
@@ -23,7 +23,7 @@ type TrainingStatus =
   | 'training_exam'
   | 'training_tf_closure';
 
-const STATUS_OPTIONS: StatusOption[] = [
+const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
   {
     value: 'training_tf_creation',
     label: PROCESS_LABELS.get('training_tf_creation' as ProcessType) ?? 'Training File - Creation',
@@ -132,14 +132,13 @@ export default function TrainingsPage() {
               </div>
 
               <DynamicBbcTemplateRunner
-                templateGroup="trainings"
                 title="Inputs"
                 description="Fields are defined in the BBC Templates editor."
-                initialStatus={selectedStatus}
-                statusLabel="Status"
-                statusOptions={STATUS_OPTIONS}
+                initialProcessType={selectedStatus}
+                processTypeLabel="Status"
+                processTypeOptions={PROCESS_TYPE_OPTIONS}
                 providedValues={providedValues}
-                onStatusChange={(status) => setSelectedStatus(status as TrainingStatus)}
+                onProcessTypeChange={(processType) => setSelectedStatus(processType as TrainingStatus)}
                 onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {

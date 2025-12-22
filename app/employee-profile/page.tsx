@@ -2,7 +2,7 @@
 
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import DynamicBbcTemplateRunner from '@/components/DynamicBbcTemplateRunner';
+import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
@@ -56,8 +56,12 @@ export default function EmployeeProfilePage() {
       }
     : undefined;
 
-  const templateGroup = activeTab === 'creation' ? 'employee_profile_creation' : 'employee_profile_update';
+  const processType = activeTab === 'creation' ? 'employee_profile_creation' : 'employee_profile_update';
   const title = activeTab === 'creation' ? 'Profile Creation' : 'Update Logs';
+
+  const processTypeOptions: ProcessTypeOption[] = [
+    { value: processType, label: title },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,9 +109,10 @@ export default function EmployeeProfilePage() {
               </div>
 
               <DynamicBbcTemplateRunner
-                templateGroup={templateGroup}
                 title={title}
                 description="Fill the inputs below. If a {{variable}} exists in the template, it must have a field definition in the editor."
+                initialProcessType={processType}
+                processTypeOptions={processTypeOptions}
                 providedValues={providedValues}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {
@@ -125,7 +130,7 @@ export default function EmployeeProfilePage() {
                     const { error } = await supabase.from('hr_activities').insert({
                       hr_id: user.id,
                       bbc_content: generatedBBC,
-                      activity_type: templateGroup,
+                      activity_type: processType,
                     });
 
                     if (error) {

@@ -3,7 +3,7 @@ export type FieldTransform = 'raw' | 'bbc_list';
 
 export type TemplateRow = {
   id: string;
-  status: string;
+  process_type: string;
   template_code: string;
 };
 

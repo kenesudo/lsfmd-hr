@@ -3,7 +3,7 @@
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
+import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
@@ -77,7 +77,7 @@ export default function ApplicationsPage() {
     fetchData();
   }, []);
 
-  const statusOptions: StatusOption[] = [
+  const processTypeOptions: ProcessTypeOption[] = [
     { value: 'application_pending_interview', label: PROCESS_LABELS.get('application_pending_interview' as ProcessType) ?? 'Application - Pending Interview' },
     { value: 'application_pending_badge', label: PROCESS_LABELS.get('application_pending_badge' as ProcessType) ?? 'Application - Pending Badge' },
     { value: 'application_hired', label: PROCESS_LABELS.get('application_hired' as ProcessType) ?? 'Application - Hired' },
@@ -141,14 +141,13 @@ export default function ApplicationsPage() {
             </div>
 
             <DynamicBbcTemplateRunner
-              templateGroup="application"
               title="Input Details"
               description="Fill the inputs below. Fields are defined in the BBC Templates editor."
-              initialStatus={selectedStatus}
-              statusLabel="Application Status"
-              statusOptions={statusOptions}
+              initialProcessType={selectedStatus}
+              processTypeLabel="Application Status"
+              processTypeOptions={processTypeOptions}
               providedValues={providedValues}
-              onStatusChange={(status) => setSelectedStatus(status as ApplicationStatus)}
+              onProcessTypeChange={(processType) => setSelectedStatus(processType as ApplicationStatus)}
               onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
               primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
               onPrimaryAction={async ({ generatedBBC }) => {

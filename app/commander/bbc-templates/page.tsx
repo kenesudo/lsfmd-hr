@@ -7,6 +7,7 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
+import { PROCESS_OPTIONS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -14,18 +15,11 @@ import { toast } from 'sonner';
 type FieldType = 'text' | 'textarea' | 'select';
 type FieldTransform = 'raw' | 'bbc_list';
 
-type TemplateGroup =
-  | 'application'
-  | 'reinstatement'
-  | 'trainings'
-  | 'employee_profile_creation'
-  | 'employee_profile_update'
-  | 'supervision';
-
 type TemplateRow = {
   id: string;
-  status: string;
+  process_type: ProcessType;
   template_code: string;
+  created_at: string;
 };
 
 type TemplateFieldRow = {
@@ -83,19 +77,12 @@ const normalizeOptions = (optionsText: string) => {
     .filter(Boolean);
 };
 
-const GROUP_OPTIONS: { value: TemplateGroup; label: string }[] = [
-  { value: 'application', label: 'Applications' },
-  { value: 'reinstatement', label: 'Reinstatements' },
-  { value: 'trainings', label: 'Trainings' },
-  { value: 'employee_profile_creation', label: 'Employee Profile (Creation)' },
-  { value: 'employee_profile_update', label: 'Employee Profile (Update)' },
-  { value: 'supervision', label: 'Supervisions' },
-];
+const PROCESS_SELECT_OPTIONS = [...PROCESS_OPTIONS];
 
 export default function CommanderBBCTemplatesPage() {
-  const [group, setGroup] = useState<TemplateGroup>('application');
+  const [processType, setProcessType] = useState<ProcessType>('application_pending_interview');
   const [rows, setRows] = useState<TemplateRow[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
+
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -104,7 +91,7 @@ export default function CommanderBBCTemplatesPage() {
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [fieldsSaving, setFieldsSaving] = useState(false);
 
-  const selectedRow = useMemo(() => rows.find((r) => r.id === selectedId) ?? null, [rows, selectedId]);
+  const row = useMemo(() => rows.find((r) => r.process_type === processType) ?? null, [rows, processType]);
 
   useEffect(() => {
     const load = async () => {
@@ -113,48 +100,42 @@ export default function CommanderBBCTemplatesPage() {
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
           .from('bbc_templates')
-          .select('id,status,template_code')
-          .eq('template_group', group)
-          .order('status');
+          .select('id, process_type, template_code, created_at')
+          .order('process_type');
         if (error) {
           toast.error(error.message || 'Failed to load templates');
           setRows([]);
-          setSelectedId('');
           setDraft('');
           return;
         }
         const list = (data ?? []) as TemplateRow[];
         setRows(list);
-        const first = list[0]?.id ?? '';
-        setSelectedId(first);
-        setDraft(list.find((r) => r.id === first)?.template_code ?? '');
+        setDraft(list.find((r) => r.process_type === processType)?.template_code ?? '');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [group]);
+  }, []);
 
   useEffect(() => {
-    if (!selectedRow) {
-      setDraft('');
-      setFields([]);
-      return;
-    }
-    setDraft(selectedRow.template_code);
-  }, [selectedRow?.id]);
+    setDraft(row?.template_code ?? '');
+  }, [row?.id, processType]);
 
   useEffect(() => {
     const loadFields = async () => {
-      if (!selectedRow) return;
+      if (!row) {
+        setFields([]);
+        return;
+      }
       setFieldsLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase
           .from('bbc_template_fields')
           .select('id, template_id, field_key, label, field_type, required, placeholder, default_value, transform, options, sort_order')
-          .eq('template_id', selectedRow.id)
+          .eq('template_id', row.id)
           .order('sort_order', { ascending: true })
           .order('field_key', { ascending: true });
 
@@ -185,25 +166,45 @@ export default function CommanderBBCTemplatesPage() {
     };
 
     loadFields();
-  }, [selectedRow?.id]);
+  }, [row?.id]);
 
   const handleSave = async () => {
-    if (!selectedRow) return;
     setSaving(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase
-        .from('bbc_templates')
-        .update({ template_code: draft })
-        .eq('id', selectedRow.id);
 
-      if (error) {
-        toast.error(error.message || 'Failed to save template');
+      if (row) {
+        const { error } = await supabase
+          .from('bbc_templates')
+          .update({ template_code: draft })
+          .eq('process_type', processType);
+
+        if (error) {
+          toast.error(error.message || 'Failed to save');
+          return;
+        }
+
+        setRows((prev) => prev.map((r) => (r.process_type === processType ? { ...r, template_code: draft } : r)));
+        toast.success('Saved');
         return;
       }
 
-      setRows((prev) => prev.map((r) => (r.id === selectedRow.id ? { ...r, template_code: draft } : r)));
-      toast.success('Saved');
+      const { data, error } = await supabase
+        .from('bbc_templates')
+        .insert({ process_type: processType, template_code: draft })
+        .select('id, process_type, template_code, created_at')
+        .single();
+
+      if (error) {
+        toast.error(error.message || 'Failed to create');
+        return;
+      }
+
+      if (data) {
+        setRows((prev) => [...prev, data as TemplateRow]);
+      }
+
+      toast.success('Created');
     } finally {
       setSaving(false);
     }
@@ -214,7 +215,10 @@ export default function CommanderBBCTemplatesPage() {
   }, [draft]);
 
   const addMissingFields = () => {
-    if (!selectedRow) return;
+    if (!row) {
+      toast.error('Create this template first before syncing fields.');
+      return;
+    }
     const existing = new Set(fields.map((f) => f.field_key));
     const missing = detectedKeys.filter((key) => !existing.has(key));
     if (missing.length === 0) {
@@ -252,14 +256,17 @@ export default function CommanderBBCTemplatesPage() {
   };
 
   const handleSaveFields = async () => {
-    if (!selectedRow) return;
+    if (!row) {
+      toast.error('Create this template first before saving fields.');
+      return;
+    }
     setFieldsSaving(true);
     try {
       const supabase = createSupabaseBrowserClient();
       const { data: existingRows, error: loadErr } = await supabase
         .from('bbc_template_fields')
         .select('id, field_key')
-        .eq('template_id', selectedRow.id);
+        .eq('template_id', row.id);
 
       if (loadErr) {
         toast.error(loadErr.message || 'Failed to load existing fields');
@@ -276,7 +283,7 @@ export default function CommanderBBCTemplatesPage() {
         const options = field.field_type === 'select' ? normalizeOptions(field.optionsText) : [];
 
         const base = {
-          template_id: selectedRow.id,
+          template_id: row.id,
           field_key: fieldKey,
           label: field.label.trim() || titleizeKey(fieldKey),
           field_type: field.field_type,
@@ -337,21 +344,20 @@ export default function CommanderBBCTemplatesPage() {
             <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4">
               <div className="space-y-4">
                 <Select
-                  label="Process"
-                  value={group}
-                  onChange={(e) => setGroup(e.target.value as TemplateGroup)}
-                  options={GROUP_OPTIONS}
+                  label="Process Type"
+                  value={processType}
+                  onChange={(e) => setProcessType(e.target.value as ProcessType)}
+                  options={PROCESS_SELECT_OPTIONS}
                 />
 
-                <Select
-                  label="Status"
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value)}
-                  options={rows.map((r) => ({ value: r.id, label: r.status }))}
-                />
+                <Input label="Current Row Id" value={row?.id ?? ''} disabled placeholder="(not created yet)" />
 
-                {loading && (
-                  <p className="text-sm text-muted-foreground">Loading…</p>
+                {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+
+                {!loading && !row && (
+                  <p className="text-sm text-muted-foreground">
+                    No row yet for this process type. Enter template code and click Save to create it.
+                  </p>
                 )}
               </div>
             </div>
@@ -363,7 +369,6 @@ export default function CommanderBBCTemplatesPage() {
                 onChange={(e) => setDraft(e.target.value)}
                 className="min-h-[420px] font-mono"
                 placeholder="Template code"
-                disabled={!selectedRow}
               />
 
               <div className="mt-4 rounded-md border border-border bg-muted/20 p-4">
@@ -379,7 +384,7 @@ export default function CommanderBBCTemplatesPage() {
                   <Button
                     variant="outline"
                     onClick={addMissingFields}
-                    disabled={!selectedRow || detectedKeys.length === 0}
+                    disabled={!row || detectedKeys.length === 0}
                   >
                     Sync fields from template
                   </Button>
@@ -503,7 +508,7 @@ export default function CommanderBBCTemplatesPage() {
                 <div className="mt-4 flex gap-3 flex-wrap">
                   <Button
                     onClick={handleSaveFields}
-                    disabled={!selectedRow || fieldsLoading || fieldsSaving}
+                    disabled={!row || fieldsLoading || fieldsSaving}
                   >
                     {fieldsSaving ? 'Saving fields…' : 'Save Fields'}
                   </Button>
@@ -511,13 +516,13 @@ export default function CommanderBBCTemplatesPage() {
               </div>
 
               <div className="mt-4 flex gap-3">
-                <Button onClick={handleSave} disabled={!selectedRow || saving}>
-                  {saving ? 'Saving…' : 'Save'}
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving…' : row ? 'Save' : 'Create'}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setDraft(selectedRow?.template_code ?? '')}
-                  disabled={!selectedRow || saving}
+                  onClick={() => setDraft(row?.template_code ?? '')}
+                  disabled={saving}
                 >
                   Reset
                 </Button>

@@ -3,7 +3,7 @@
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
+import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
 import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
@@ -33,7 +33,7 @@ type ReinstatementStatus =
   | 'reinstatement_exam_failed'
   | 'reinstatement_denied';
 
-const STATUS_OPTIONS: StatusOption[] = [
+const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
   {
     value: 'reinstatement_on_hold',
     label: PROCESS_LABELS.get('reinstatement_on_hold' as ProcessType) ?? 'Reinstatement - On Hold',
@@ -147,14 +147,13 @@ export default function ReinstatementPage() {
               </div>
 
               <DynamicBbcTemplateRunner
-                templateGroup="reinstatement"
-                title="Inputs"
-                description="Fields are defined in the BBC Templates editor."
-                initialStatus={selectedStatus}
-                statusLabel="Status"
-                statusOptions={STATUS_OPTIONS}
+                title="Input Details"
+                description="Fill the inputs below. Fields are defined in the BBC Templates editor."
+                initialProcessType={selectedStatus}
+                processTypeLabel="Reinstatement Status"
+                processTypeOptions={PROCESS_TYPE_OPTIONS}
                 providedValues={providedValues}
-                onStatusChange={(status) => setSelectedStatus(status as ReinstatementStatus)}
+                onProcessTypeChange={(processType) => setSelectedStatus(processType as ReinstatementStatus)}
                 onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {
