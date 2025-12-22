@@ -1,12 +1,10 @@
 'use client';
 
-import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
+import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import Input from '@/components/Input';
-import Select from '@/components/Select';
+import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
-import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -36,31 +34,22 @@ interface UserProfile {
   hr_rank: string;
 }
 
-interface BBCTemplate {
-  id: string;
-  status: string;
-  template_code: string;
-}
-
-type ApplicationStatus = 
-  | 'pending_interview' 
-  | 'pending_badge' 
-  | 'hired' 
-  | 'on_hold' 
-  | 'closed' 
-  | 'denied' 
+type ApplicationStatus =
+  | 'pending_interview'
+  | 'pending_badge'
+  | 'hired'
+  | 'on_hold'
+  | 'closed'
+  | 'denied'
   | 'blacklisted';
 
 export default function ApplicationsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [templates, setTemplates] = useState<BBCTemplate[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('pending_interview');
-  const [applicantName, setApplicantName] = useState('');
-  const [reasons, setReasons] = useState<string[]>(['']);
+
+  const [autoFillHr, setAutoFillHr] = useState(true);
   const [generatedBBC, setGeneratedBBC] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('pending_interview');
   const [saving, setSaving] = useState(false);
-  const [gettingScore, setGettingScore] = useState(false);
 
   const [logCopied, setLogCopied] = useState(false);
   const [interviewLogCopied, setInterviewLogCopied] = useState(false);
@@ -82,79 +71,12 @@ export default function ApplicationsPage() {
           setProfile(profileData);
         }
       }
-
-      // Fetch BBC templates
-      const { data: templatesData } = await supabase
-        .from('bbc_templates')
-        .select('id, status, template_code')
-        .eq('template_group', 'application')
-        .order('status');
-      
-      if (templatesData) {
-        setTemplates(templatesData);
-      }
     };
 
     fetchData();
   }, []);
 
-  useEffect(() => {
-    generateBBC();
-  }, [selectedStatus, applicantName, reasons, profile, templates]);
-
-  const generateBBC = () => {
-    if (!profile || !applicantName.trim()) {
-      return '';
-    }
-
-    const template = templates.find(t => t.status === selectedStatus);
-    if (!template) {
-      return '';
-    }
-
-    let bbc = template.template_code;
-    bbc = bbc.replace(/{{applicant_name}}/g, applicantName);
-    bbc = bbc.replace(/{{hr_rank}}/g, profile.hr_rank);
-    bbc = bbc.replace(/{{hr_name}}/g, profile.full_name);
-
-    if (selectedStatus === 'on_hold' || selectedStatus === 'closed' || selectedStatus === 'denied' || selectedStatus === 'blacklisted') {
-      const cleanReasons = reasons
-        .map((r) => r.trim())
-        .filter(Boolean);
-
-      const reasonsList = cleanReasons.length
-        ? `[LIST]\n${cleanReasons.map((r) => `[*] ${r}`).join('\n')}\n[/LIST]`
-        : 'N/A';
-
-      bbc = bbc.replace(/{{reasons}}/g, reasonsList);
-    }
-
-    return bbc;
-  };
-
-  const handleGenerate = async () => {
-    const bbc = generateBBC();
-    if (!bbc) {
-      setGeneratedBBC('');
-      return;
-    }
-
-    setGeneratedBBC(bbc);
-  };
-
-  const handleCopy = async () => {
-    try {
-      if (!generatedBBC) return;
-      await navigator.clipboard.writeText(generatedBBC);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success('BBC code copied');
-    } catch {
-      toast.error('Failed to copy BBC code');
-    }
-  };
-
-  const statusOptions = [
+  const statusOptions: StatusOption[] = [
     { value: 'pending_interview', label: 'Pending Interview' },
     { value: 'pending_badge', label: 'Pending Badge' },
     { value: 'hired', label: 'Hired' },
@@ -191,89 +113,12 @@ export default function ApplicationsPage() {
     }
   };
 
-  const handleSaveActivity = async () => {
-    if (!generatedBBC || !profile) return;
-
-    setSaving(true);
-    const supabase = createSupabaseBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
-      const reasonsText = reasons.filter(r => r.trim()).join('; ');
-      
-      await supabase.from('hr_activities').insert({
-        hr_id: user.id,
-        bbc_content: generatedBBC,
-        activity_type: 'application_response',
-      });
-
-      // Reset form
-      setApplicantName('');
-      setReasons(['']);
-      setGeneratedBBC('');
-    }
-
-    setSaving(false);
-  };
-
-  const handleGetScore = async () => {
-    if (!generatedBBC || !profile) return;
-
-    setGettingScore(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast.error('You are not signed in');
-        return;
+  const providedValues: Record<string, string> | undefined = autoFillHr
+    ? {
+        hr_rank: profile?.hr_rank ?? '',
+        hr_name: profile?.full_name ?? '',
       }
-
-      const reasonsText = reasons.filter(r => r.trim()).join('; ');
-
-      const { error } = await supabase.from('hr_activities').insert({
-        hr_id: user.id,
-        bbc_content: generatedBBC,
-        activity_type: 'application_response',
-      });
-
-      if (error) {
-        toast.error(error.message || 'Failed to save activity');
-        return;
-      }
-
-      toast.success('Saved successfully');
-
-      setApplicantName('');
-      setReasons(['']);
-      setGeneratedBBC('');
-      setCopied(false);
-      setLogCopied(false);
-      setInterviewLogCopied(false);
-    } catch {
-      toast.error('Failed to save activity');
-    } finally {
-      setGettingScore(false);
-    }
-  };
-
-  const addReason = () => {
-    setReasons([...reasons, '']);
-  };
-
-  const updateReason = (index: number, value: string) => {
-    const newReasons = [...reasons];
-    newReasons[index] = value;
-    setReasons(newReasons);
-  };
-
-  const removeReason = (index: number) => {
-    if (reasons.length > 1) {
-      setReasons(reasons.filter((_, i) => i !== index));
-    }
-  };
-
-  const requiresReasons = ['on_hold', 'closed', 'denied', 'blacklisted'].includes(selectedStatus);
+    : undefined;
 
   return (
     <div className="flex h-screen bg-background">
@@ -286,186 +131,98 @@ export default function ApplicationsPage() {
               Application Template Generator
             </h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Input Section */}
-              <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4">
-                <h2 className="text-xl font-semibold text-foreground mb-4">
-                  Input Details
-                </h2>
+            <div className="mb-4">
+              <Checkbox
+                label="Auto-fill HR name/rank"
+                checked={autoFillHr}
+                onChange={(e) => setAutoFillHr(e.target.checked)}
+              />
+            </div>
 
+            <DynamicBbcTemplateRunner
+              templateGroup="application"
+              title="Input Details"
+              description="Fill the inputs below. Fields are defined in the BBC Templates editor."
+              initialStatus={selectedStatus}
+              statusLabel="Application Status"
+              statusOptions={statusOptions}
+              providedValues={providedValues}
+              onStatusChange={(status) => setSelectedStatus(status as ApplicationStatus)}
+              onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
+              primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
+              onPrimaryAction={async ({ generatedBBC }) => {
+                setSaving(true);
+                try {
+                  const supabase = createSupabaseBrowserClient();
+                  const {
+                    data: { user },
+                  } = await supabase.auth.getUser();
+
+                  if (!user) {
+                    toast.error('You are not signed in');
+                    return;
+                  }
+
+                  const { error } = await supabase.from('hr_activities').insert({
+                    hr_id: user.id,
+                    bbc_content: generatedBBC,
+                    activity_type: 'application_response',
+                  });
+
+                  if (error) {
+                    toast.error(error.message || 'Failed to save activity');
+                    return;
+                  }
+
+                  toast.success('Saved successfully');
+                  setLogCopied(false);
+                  setInterviewLogCopied(false);
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            />
+
+            <div className="mt-6 bg-card border border-border rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-foreground mb-4">Logging Section</h2>
+
+              {generatedBBC ? (
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Application Status
-                    </label>
-                    <Select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatus)}
-                      options={statusOptions}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Applicant Name
-                    </label>
-                    <Input
-                      type="text"
-                      value={applicantName}
-                      onChange={(e) => setApplicantName(e.target.value)}
-                      placeholder="Enter applicant's full name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      HR Rank (Auto-filled)
-                    </label>
-                    <Input
-                      type="text"
-                      value={profile?.hr_rank || 'Loading...'}
-                      disabled
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      HR Name (Auto-filled)
-                    </label>
-                    <Input
-                      type="text"
-                      value={profile?.full_name || 'Loading...'}
-                      disabled
-                    />
-                  </div>
-
-                  {requiresReasons && (
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Reason(s)
-                      </label>
-                      <div className="space-y-2">
-                        {reasons.map((reason, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Input
-                              type="text"
-                              value={reason}
-                              onChange={(e) => updateReason(index, e.target.value)}
-                              placeholder={`Reason ${index + 1}`}
-                            />
-                            {reasons.length > 1 && (
-                              <button
-                                onClick={() => removeReason(index)}
-                                className="px-3 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <Button
-                          onClick={addReason}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          + Add Another Reason
-                        </Button>
-                      </div>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Button onClick={handleCopyLog} className="w-full">
+                        {logCopied ? '✓ Copied!' : 'Copy Log'}
+                      </Button>
                     </div>
-                  )}
 
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={!profile || templates.length === 0}
-                    className="w-full"
-                  >
-                    Generate Template
-                  </Button>
-
-                  <div className="pt-4 border-t border-border">
-                    <h3 className="text-lg font-semibold text-foreground mb-3">
-                      Logging Section
-                    </h3>
-
-                    {generatedBBC ? (
-                      <div className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex gap-2">
-                            <Button onClick={handleCopyLog} className="w-full">
-                              {logCopied ? '✓ Copied!' : 'Copy Log'}
-                            </Button>
-                          </div>
-
-                          <div className="p-3 bg-secondary rounded-md">
-                            <div
-                              className="text-sm text-foreground overflow-x-auto"
-                              dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
-                            />
-                          </div>
-                        </div>
-
-                        {showInterviewLog && (
-                          <div className="space-y-3">
-                            <div className="flex gap-2">
-                              <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
-                                {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
-                              </Button>
-                            </div>
-
-                            <div className="p-3 bg-secondary rounded-md">
-                              <div
-                                className="text-sm text-foreground overflow-x-auto"
-                                dangerouslySetInnerHTML={{ __html: markdownToHtml(interviewLogMarkdown) }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Generate a template to show the log markdown.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* BBC Output Section */}
-              <div className="bg-card border border-border rounded-lg p-6 lg:col-span-8">
-                <h2 className="text-xl font-semibold text-foreground mb-4">
-                  Generated BBC Code
-                </h2>
-
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleCopy}
-                      disabled={!generatedBBC}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      {copied ? '✓ Copied!' : 'Copy to Clipboard'}
-                    </Button>
-                    <Button
-                      onClick={handleGetScore}
-                      disabled={!generatedBBC || gettingScore}
-                      variant="primary"
-                      className="flex-1"
-                    >
-                      {gettingScore ? 'Saving…' : 'Save Activity'}
-                    </Button>
-                  </div>
-
-                  {generatedBBC && (
-                    <div className="mt-4 p-4 bg-secondary rounded-md h-screen">
-                      <BbcodePreview
-                        html={renderBbcode(generatedBBC)}
-                        title="Application BBC preview"
+                    <div className="p-3 bg-secondary rounded-md">
+                      <div
+                        className="text-sm text-foreground overflow-x-auto"
+                        dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
                       />
                     </div>
+                  </div>
+
+                  {showInterviewLog && (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
+                          {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
+                        </Button>
+                      </div>
+
+                      <div className="p-3 bg-secondary rounded-md">
+                        <div
+                          className="text-sm text-foreground overflow-x-auto"
+                          dangerouslySetInnerHTML={{ __html: markdownToHtml(interviewLogMarkdown) }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Generate a template to show the log markdown.</p>
+              )}
             </div>
           </div>
         </main>

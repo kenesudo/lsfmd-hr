@@ -1,12 +1,10 @@
 'use client';
 
-import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
+import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
-import Input from '@/components/Input';
-import Select from '@/components/Select';
+import DynamicBbcTemplateRunner, { type StatusOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
-import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -34,13 +32,7 @@ type ReinstatementStatus =
   | 'exam_failed'
   | 'denied';
 
-type BBCTemplate = {
-  id: string;
-  status: ReinstatementStatus;
-  template_code: string;
-};
-
-const STATUS_OPTIONS: { value: ReinstatementStatus; label: string }[] = [
+const STATUS_OPTIONS: StatusOption[] = [
   { value: 'on_hold', label: 'On Hold' },
   { value: 'pending_recommendations', label: 'Pending Recommendations' },
   { value: 'pending_exam', label: 'Pending Reinstatement Exam' },
@@ -49,17 +41,12 @@ const STATUS_OPTIONS: { value: ReinstatementStatus; label: string }[] = [
   { value: 'denied', label: 'Denied' },
 ];
 
-const STATUSES_REQUIRING_REASONS: ReinstatementStatus[] = ['on_hold', 'exam_failed', 'denied'];
-
 export default function ReinstatementPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [templates, setTemplates] = useState<BBCTemplate[]>([]);
+  const [autoFillHr, setAutoFillHr] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<ReinstatementStatus>('on_hold');
-  const [applicantName, setApplicantName] = useState('');
-  const [reasons, setReasons] = useState<string[]>(['']);
   const [generatedBBC, setGeneratedBBC] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [gettingScore, setGettingScore] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [logCopied, setLogCopied] = useState(false);
   const [interviewLogCopied, setInterviewLogCopied] = useState(false);
 
@@ -79,73 +66,10 @@ export default function ReinstatementPage() {
       if (profileData) {
         setProfile(profileData as UserProfile);
       }
-
-      const { data: templateData } = await supabase
-        .from('bbc_templates')
-        .select('id, status, template_code')
-        .eq('template_group', 'reinstatement')
-        .order('status');
-
-      if (templateData) {
-        setTemplates(templateData as BBCTemplate[]);
-      }
     };
 
     fetchData();
   }, []);
-
-  const addReason = () => {
-    setReasons([...reasons, '']);
-  };
-
-  const updateReason = (index: number, value: string) => {
-    const newReasons = [...reasons];
-    newReasons[index] = value;
-    setReasons(newReasons);
-  };
-
-  const removeReason = (index: number) => {
-    const newReasons = reasons.filter((_, i) => i !== index);
-    setReasons(newReasons.length ? newReasons : ['']);
-  };
-
-  const handleGenerate = () => {
-    if (!profile) return;
-
-    const template = templates.find((t) => t.status === selectedStatus);
-    if (!template) {
-      setGeneratedBBC('');
-      return;
-    }
-
-    let bbc = template.template_code;
-
-    bbc = bbc.replace(/{{hr_rank}}/g, profile.hr_rank);
-    bbc = bbc.replace(/{{hr_name}}/g, profile.full_name);
-
-    if (bbc.includes('{{reasons}}')) {
-      const cleanReasons = reasons.map((r) => r.trim()).filter(Boolean);
-      const reasonsList = cleanReasons.length
-        ? `[LIST]\n${cleanReasons.map((r) => `[*] ${r}`).join('\n')}\n[/LIST]`
-        : 'N/A';
-
-      bbc = bbc.replace(/{{reasons}}/g, reasonsList);
-    }
-
-    setGeneratedBBC(bbc);
-  };
-
-  const handleCopy = async () => {
-    try {
-      if (!generatedBBC) return;
-      await navigator.clipboard.writeText(generatedBBC);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success('BBC code copied');
-    } catch {
-      toast.error('Failed to copy BBC code');
-    }
-  };
 
   const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
   const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
@@ -174,48 +98,12 @@ export default function ReinstatementPage() {
     }
   };
 
-  const handleGetScore = async () => {
-    if (!generatedBBC || !profile) return;
-
-    setGettingScore(true);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        toast.error('You are not signed in');
-        return;
+  const providedValues: Record<string, string> | undefined = autoFillHr
+    ? {
+        hr_rank: profile?.hr_rank ?? '',
+        hr_name: profile?.full_name ?? '',
       }
-
-      const reasonsText = reasons.filter(r => r.trim()).join('; ');
-
-      const { error } = await supabase.from('hr_activities').insert({
-        hr_id: user.id,
-        bbc_content: generatedBBC,
-        activity_type: 'reinstatement_exam',
-      });
-
-      if (error) {
-        toast.error(error.message || 'Failed to save activity');
-        return;
-      }
-
-      toast.success('Saved successfully');
-
-      setApplicantName('');
-      setReasons(['']);
-      setGeneratedBBC('');
-      setCopied(false);
-      setLogCopied(false);
-      setInterviewLogCopied(false);
-    } catch {
-      toast.error('Failed to save activity');
-    } finally {
-      setGettingScore(false);
-    }
-  };
-
-  const showReasons = STATUSES_REQUIRING_REASONS.includes(selectedStatus);
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -229,148 +117,94 @@ export default function ReinstatementPage() {
             <div className="max-w-7xl mx-auto">
               <h1 className="text-3xl font-bold text-foreground mb-8">Reinstatement Templates</h1>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Inputs</h2>
+              <div className="mb-4">
+                <Checkbox
+                  label="Auto-fill HR name/rank"
+                  checked={autoFillHr}
+                  onChange={(e) => setAutoFillHr(e.target.checked)}
+                />
+              </div>
 
+              <DynamicBbcTemplateRunner
+                templateGroup="reinstatement"
+                title="Inputs"
+                description="Fields are defined in the BBC Templates editor."
+                initialStatus={selectedStatus}
+                statusLabel="Status"
+                statusOptions={STATUS_OPTIONS}
+                providedValues={providedValues}
+                onStatusChange={(status) => setSelectedStatus(status as ReinstatementStatus)}
+                onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
+                primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
+                onPrimaryAction={async ({ generatedBBC }) => {
+                  setSaving(true);
+                  try {
+                    const supabase = createSupabaseBrowserClient();
+                    const { data: { user } } = await supabase.auth.getUser();
+
+                    if (!user) {
+                      toast.error('You are not signed in');
+                      return;
+                    }
+
+                    const { error } = await supabase.from('hr_activities').insert({
+                      hr_id: user.id,
+                      bbc_content: generatedBBC,
+                      activity_type: 'reinstatement_exam',
+                    });
+
+                    if (error) {
+                      toast.error(error.message || 'Failed to save activity');
+                      return;
+                    }
+
+                    toast.success('Saved successfully');
+                    setLogCopied(false);
+                    setInterviewLogCopied(false);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              />
+
+              <div className="mt-6 bg-card border border-border rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-foreground mb-4">Logging Section</h2>
+
+                {generatedBBC ? (
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-                      <Select
-                        value={selectedStatus}
-                        onChange={(e) => {
-                          const next = e.target.value as ReinstatementStatus;
-                          setSelectedStatus(next);
-                          setGeneratedBBC('');
-                          if (!STATUSES_REQUIRING_REASONS.includes(next)) {
-                            setReasons(['']);
-                          }
-                        }}
-                        options={STATUS_OPTIONS}
-                      >
-                      </Select>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Button onClick={handleCopyLog} className="w-full">
+                          {logCopied ? '✓ Copied!' : 'Copy Log'}
+                        </Button>
+                      </div>
+
+                      <div className="p-3 bg-secondary rounded-md">
+                        <div className="text-sm text-foreground overflow-x-auto">
+                          <pre className="whitespace-pre-wrap">{logMarkdown}</pre>
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Applicant Name</label>
-                      <Input
-                        value={applicantName}
-                        onChange={(e) => setApplicantName(e.target.value)}
-                        placeholder="Enter applicant name"
-                      />
-                    </div>
-
-                    {showReasons && (
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">Reasons</label>
-                        <div className="space-y-2">
-                          {reasons.map((reason, index) => (
-                            <div key={index} className="flex gap-2">
-                              <Input
-                                value={reason}
-                                onChange={(e) => updateReason(index, e.target.value)}
-                                placeholder={`Reason ${index + 1}`}
-                              />
-                              {reasons.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={() => removeReason(index)}
-                                >
-                                  Remove
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-
-                          <Button type="button" variant="outline" onClick={addReason}>
-                            Add Reason
+                    {showInterviewLog && (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
+                            {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
                           </Button>
                         </div>
-                      </div>
-                    )}
 
-                    <Button onClick={handleGenerate} disabled={!profile || templates.length === 0}>
-                      Generate Template
-                    </Button>
-
-                    <div className="pt-4 border-t border-border">
-                      <h3 className="text-lg font-semibold text-foreground mb-3">Logging Section</h3>
-
-                      {generatedBBC ? (
-                        <div className="space-y-4">
-                          <div className="space-y-3">
-                            <div className="flex gap-2">
-                              <Button onClick={handleCopyLog} className="w-full">
-                                {logCopied ? '✓ Copied!' : 'Copy Log'}
-                              </Button>
-                            </div>
-
-                            <div className="p-3 bg-secondary rounded-md">
-                              <div className="text-sm text-foreground overflow-x-auto">
-                                <pre className="whitespace-pre-wrap">{logMarkdown}</pre>
-                              </div>
-                            </div>
+                        <div className="p-3 bg-secondary rounded-md">
+                          <div className="text-sm text-foreground overflow-x-auto">
+                            <pre className="whitespace-pre-wrap">{interviewLogMarkdown}</pre>
                           </div>
-
-                          {showInterviewLog && (
-                            <div className="space-y-3">
-                              <div className="flex gap-2">
-                                <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
-                                  {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
-                                </Button>
-                              </div>
-
-                              <div className="p-3 bg-secondary rounded-md">
-                                <div className="text-sm text-foreground overflow-x-auto">
-                                  <pre className="whitespace-pre-wrap">{interviewLogMarkdown}</pre>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Generate a template to show the log markdown.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-card border border-border rounded-lg p-6 lg:col-span-8">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Generated BBC Code</h2>
-
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleCopy}
-                        disabled={!generatedBBC}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        {copied ? '✓ Copied!' : 'Copy to Clipboard'}
-                      </Button>
-                      <Button
-                        onClick={handleGetScore}
-                        disabled={!generatedBBC || gettingScore}
-                        variant="primary"
-                        className="flex-1"
-                      >
-                        {gettingScore ? 'Saving…' : 'Save Activity'}
-                      </Button>
-                    </div>
-
-                    {generatedBBC && (
-                      <div className="mt-4 p-4 bg-secondary rounded-md h-screen">
-                        <BbcodePreview
-                          html={renderBbcode(generatedBBC)}
-                          title="Reinstatement BBC preview"
-                        />
                       </div>
                     )}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Generate a template to show the log markdown.</p>
+                )}
               </div>
             </div>
           </main>
