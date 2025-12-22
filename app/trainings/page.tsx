@@ -97,9 +97,10 @@ export default function TrainingsPage() {
       }
 
       const { data: templateData } = await supabase
-        .from('trainings_bbc_templates')
+        .from('bbc_templates')
         .select('id, status, template_code')
-        .order('created_at', { ascending: true });
+        .eq('template_group', 'trainings')
+        .order('status');
 
       if (templateData) {
         setTemplates(templateData as BBCTemplate[]);

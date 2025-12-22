@@ -187,17 +187,19 @@ export default function EmployeeProfilePage() {
         if (profileData) setProfile(profileData as UserProfile);
 
         const { data: creationData, error: creationError } = await supabase
-          .from('employee_profile_bbc_templates')
+          .from('bbc_templates')
           .select('id, status, template_code')
-          .order('created_at', { ascending: true });
+          .eq('template_group', 'employee_profile_creation')
+          .order('status', { ascending: true });
 
         if (creationError) throw creationError;
         setCreationTemplate(creationData?.[0] ?? null);
 
         const { data: updateData, error: updateError } = await supabase
-          .from('employee_profile_update_log_templates')
+          .from('bbc_templates')
           .select('id, status, template_code')
-          .order('created_at', { ascending: true });
+          .eq('template_group', 'employee_profile_update')
+          .order('status', { ascending: true });
 
         if (updateError) throw updateError;
         setUpdateTemplate(updateData?.[0] ?? null);

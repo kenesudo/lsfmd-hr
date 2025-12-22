@@ -85,8 +85,9 @@ export default function ApplicationsPage() {
 
       // Fetch BBC templates
       const { data: templatesData } = await supabase
-        .from('application_bbc_templates')
-        .select('*')
+        .from('bbc_templates')
+        .select('id, status, template_code')
+        .eq('template_group', 'application')
         .order('status');
       
       if (templatesData) {

@@ -9,7 +9,12 @@ import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-type TemplateGroup = 'application' | 'reinstatement' | 'trainings';
+type TemplateGroup =
+  | 'application'
+  | 'reinstatement'
+  | 'trainings'
+  | 'employee_profile_creation'
+  | 'employee_profile_update';
 
 type TemplateRow = {
   id: string;
@@ -21,13 +26,9 @@ const GROUP_OPTIONS: { value: TemplateGroup; label: string }[] = [
   { value: 'application', label: 'Applications' },
   { value: 'reinstatement', label: 'Reinstatements' },
   { value: 'trainings', label: 'Trainings' },
+  { value: 'employee_profile_creation', label: 'Employee Profile (Creation)' },
+  { value: 'employee_profile_update', label: 'Employee Profile (Update)' },
 ];
-
-function tableNameForGroup(group: TemplateGroup) {
-  if (group === 'application') return 'application_bbc_templates';
-  if (group === 'reinstatement') return 'reinstatement_bbc_templates';
-  return 'trainings_bbc_templates';
-}
 
 export default function CommanderBBCTemplatesPage() {
   const [group, setGroup] = useState<TemplateGroup>('application');
@@ -44,8 +45,11 @@ export default function CommanderBBCTemplatesPage() {
       setLoading(true);
       try {
         const supabase = createSupabaseBrowserClient();
-        const table = tableNameForGroup(group);
-        const { data, error } = await supabase.from(table).select('id,status,template_code').order('status');
+        const { data, error } = await supabase
+          .from('bbc_templates')
+          .select('id,status,template_code')
+          .eq('template_group', group)
+          .order('status');
         if (error) {
           toast.error(error.message || 'Failed to load templates');
           setRows([]);
@@ -79,9 +83,8 @@ export default function CommanderBBCTemplatesPage() {
     setSaving(true);
     try {
       const supabase = createSupabaseBrowserClient();
-      const table = tableNameForGroup(group);
       const { error } = await supabase
-        .from(table)
+        .from('bbc_templates')
         .update({ template_code: draft })
         .eq('id', selectedRow.id);
 

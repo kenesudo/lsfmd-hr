@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const templatesPromise = supabase.from('application_bbc_templates').select('*', { count: 'exact', head: true });
+  const templatesPromise = supabase.from('bbc_templates').select('*', { count: 'exact', head: true });
   const pendingPromise = supabase
     .from('hr_activities')
     .select('*', { count: 'exact', head: true })
