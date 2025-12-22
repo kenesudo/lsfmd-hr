@@ -360,7 +360,7 @@ export default function ReinstatementPage() {
                         variant="primary"
                         className="flex-1"
                       >
-                        {gettingScore ? 'Saving…' : 'Get Score'}
+                        {gettingScore ? 'Saving…' : 'Save Activity'}
                       </Button>
                     </div>
 

@@ -503,7 +503,7 @@ export default function TrainingsPage() {
                         variant="primary"
                         className="flex-1"
                       >
-                        {saving ? 'Saving…' : 'Get Score'}
+                        {saving ? 'Saving…' : 'Save Activity'}
                       </Button>
                     </div>
 
