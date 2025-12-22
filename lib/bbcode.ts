@@ -451,9 +451,7 @@ function buildTableAttributes(
 
   const effectiveSlug =
     tagName === 'table' ? slugOverride ?? null : slugOverride ?? context.tableClassSlug ?? null;
-  const className = buildTableClassName(tagName, effectiveSlug);
-  attributes.push(` class="${className}"`);
-
+    
   const styleString = Array.from(styleFragments.entries())
     .map(([prop, val]) => `${prop}:${val}`)
     .join(';');
@@ -508,11 +506,4 @@ function slugifyClass(value: string) {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return null;
   return normalized.replace(/[^a-z0-9]+/g, '_');
-}
-
-function buildTableClassName(tagName: 'table' | 'tr' | 'td', slug: string | null) {
-  const base = slug ? `cms_table_${slug}` : 'cms_table';
-  if (tagName === 'table') return base;
-  if (tagName === 'tr') return `${base}_tr`;
-  return `${base}_td`;
 }
