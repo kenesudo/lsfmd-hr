@@ -251,6 +251,21 @@ export default function Sidebar() {
               </span>
               Markdown Logs
             </Link>
+            <Link
+              href="/commander/processes"
+              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                pathname === '/commander/processes'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              <span className="mr-3">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 4.5h15v15h-15v-15zM9 9h6v6H9V9z" />
+                </svg>
+              </span>
+              Processes
+            </Link>
           </>
         )}
       </nav>

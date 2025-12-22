@@ -5,7 +5,6 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
-import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,41 +15,13 @@ type UserProfile = {
   hr_rank: string;
 };
 
-type TrainingStatus =
-  | 'training_tf_creation'
-  | 'training_orientation'
-  | 'training_practical'
-  | 'training_exam'
-  | 'training_tf_closure';
-
-const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
-  {
-    value: 'training_tf_creation',
-    label: PROCESS_LABELS.get('training_tf_creation' as ProcessType) ?? 'Training File - Creation',
-  },
-  {
-    value: 'training_orientation',
-    label: PROCESS_LABELS.get('training_orientation' as ProcessType) ?? 'Training - Orientation',
-  },
-  {
-    value: 'training_practical',
-    label: PROCESS_LABELS.get('training_practical' as ProcessType) ?? 'Training - Practical',
-  },
-  {
-    value: 'training_exam',
-    label: PROCESS_LABELS.get('training_exam' as ProcessType) ?? 'Training - Exam',
-  },
-  {
-    value: 'training_tf_closure',
-    label: PROCESS_LABELS.get('training_tf_closure' as ProcessType) ?? 'Training File - Closure',
-  },
-];
-
 export default function TrainingsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
 
-  const [selectedStatus, setSelectedStatus] = useState<TrainingStatus>('training_tf_creation');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<ProcessTypeOption[]>([]);
+  const [processTypeOptionsLoading, setProcessTypeOptionsLoading] = useState(false);
 
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [saving, setSaving] = useState(false);
@@ -80,6 +51,43 @@ export default function TrainingsPage() {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      setProcessTypeOptionsLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', 'trainings')
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setSelectedStatus('');
+          return;
+        }
+
+        const options: ProcessTypeOption[] = (data ?? []).map((row) => ({
+          value: row.key,
+          label: row.label?.trim() ? row.label : row.key,
+        }));
+
+        setProcessTypeOptions(options);
+        setSelectedStatus((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } finally {
+        setProcessTypeOptionsLoading(false);
+      }
+    };
+
+    loadProcessOptions();
   }, []);
 
   const handleCopyTrainingLog = async () => {
@@ -136,9 +144,9 @@ export default function TrainingsPage() {
                 description="Fields are defined in the BBC Templates editor."
                 initialProcessType={selectedStatus}
                 processTypeLabel="Status"
-                processTypeOptions={PROCESS_TYPE_OPTIONS}
+                processTypeOptions={processTypeOptions}
                 providedValues={providedValues}
-                onProcessTypeChange={(processType) => setSelectedStatus(processType as TrainingStatus)}
+                onProcessTypeChange={(processType) => setSelectedStatus(processType)}
                 onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {

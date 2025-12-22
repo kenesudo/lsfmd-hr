@@ -66,37 +66,7 @@ WITH CHECK (id = auth.uid());
 
 CREATE TABLE IF NOT EXISTS public.bbc_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  process_type TEXT NOT NULL CHECK (
-    process_type IN (
-      'employee_profile_creation',
-      'employee_profile_update',
-      'application_on_hold',
-      'application_hired',
-      'application_blacklisted',
-      'application_closed',
-      'application_denied',
-      'application_pending_interview',
-      'application_pending_badge',
-      'reinstatement_on_hold',
-      'reinstatement_denied',
-      'reinstatement_exam_failed',
-      'reinstatement_pending_exam',
-      'reinstatement_pending_recommendations',
-      'reinstatement_pending_badge',
-      'training_orientation',
-      'training_practical',
-      'training_exam',
-      'training_tf_creation',
-      'training_tf_closure',
-      'lr_interview',
-      'supervision',
-      'supervision_interview',
-      'supervision_orentation',
-      'supervision_practical',
-      'supervision_reinstatement_exam',
-      'supervision_exam'
-    )
-  ),
+  process_type TEXT NOT NULL,
   template_code TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -180,38 +150,7 @@ DROP TABLE IF EXISTS public.log_markdowns;
 
 CREATE TABLE public.log_markdowns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  process_type TEXT NOT NULL CHECK (
-    process_type IN (
-      'employee_profile_creation',
-      'employee_profile_update',
-      'application_on_hold',
-      'application_hired',
-      'application_blacklisted',
-      'application_closed',
-      'application_denied',
-      'application_pending_interview',
-      'application_pending_badge',
-      'reinstatement_on_hold',
-      'reinstatement_denied',
-      'reinstatement_exam_failed',
-      'reinstatement_pending_exam',
-      'reinstatement_pending_recommendations',
-      'reinstatement_pending_badge',
-      'training_orientation',
-      'training_practical',
-      'training_exam',
-      'training_tf_creation',
-      'training_tf_closure',
-      'lr_interview',
-      'supervision',
-      'supervision_interview',
-      'supervision_orentation',
-      'supervision_practical',
-      'supervision_reinstatement_exam',
-      'supervision_exam',
-      'supervision_reinst_exam'
-    )
-  ),
+  process_type TEXT NOT NULL,
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   CONSTRAINT log_markdowns_process_type_unique UNIQUE (process_type)
@@ -248,46 +187,25 @@ WITH CHECK (
 
 CREATE TABLE IF NOT EXISTS public.hr_activities_type (
   key TEXT PRIMARY KEY,
-  score INTEGER NOT NULL DEFAULT 0,
+  process_group TEXT NOT NULL CHECK (process_group IN ('application', 'reinstatement', 'supervision', 'trainings', 'employee_profile')),
+  label TEXT NOT NULL DEFAULT '',
+  score INTEGER NOT NULL CHECK (score IN (1, 2, 3)),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-INSERT INTO public.hr_activities_type (key, score)
-VALUES
-  ('employee_profile_creation', (floor(random() * 3) + 1)::int),
-  ('employee_profile_update', (floor(random() * 3) + 1)::int),
+ALTER TABLE public.bbc_templates
+  ADD CONSTRAINT bbc_templates_process_type_fk
+  FOREIGN KEY (process_type)
+  REFERENCES public.hr_activities_type(key)
+  ON UPDATE CASCADE
+  ON DELETE RESTRICT;
 
-  ('application_pending_interview', (floor(random() * 3) + 1)::int),
-  ('application_pending_badge', (floor(random() * 3) + 1)::int),
-  ('application_hired', (floor(random() * 3) + 1)::int),
-  ('application_on_hold', (floor(random() * 3) + 1)::int),
-  ('application_closed', (floor(random() * 3) + 1)::int),
-  ('application_denied', (floor(random() * 3) + 1)::int),
-  ('application_blacklisted', (floor(random() * 3) + 1)::int),
-
-  ('reinstatement_on_hold', (floor(random() * 3) + 1)::int),
-  ('reinstatement_pending_recommendations', (floor(random() * 3) + 1)::int),
-  ('reinstatement_pending_exam', (floor(random() * 3) + 1)::int),
-  ('reinstatement_pending_badge', (floor(random() * 3) + 1)::int),
-  ('reinstatement_exam_failed', (floor(random() * 3) + 1)::int),
-  ('reinstatement_denied', (floor(random() * 3) + 1)::int),
-
-  ('training_orientation', (floor(random() * 3) + 1)::int),
-  ('training_practical', (floor(random() * 3) + 1)::int),
-  ('training_exam', (floor(random() * 3) + 1)::int),
-  ('training_tf_creation', (floor(random() * 3) + 1)::int),
-  ('training_tf_closure', (floor(random() * 3) + 1)::int),
-
-  ('lr_interview', (floor(random() * 3) + 1)::int),
-
-  ('supervision', (floor(random() * 3) + 1)::int),
-  ('supervision_interview', (floor(random() * 3) + 1)::int),
-  ('supervision_orentation', (floor(random() * 3) + 1)::int),
-  ('supervision_practical', (floor(random() * 3) + 1)::int),
-  ('supervision_reinstatement_exam', (floor(random() * 3) + 1)::int),
-  ('supervision_exam', (floor(random() * 3) + 1)::int)
-ON CONFLICT (key) DO UPDATE
-SET score = EXCLUDED.score;
+ALTER TABLE public.log_markdowns
+  ADD CONSTRAINT log_markdowns_process_type_fk
+  FOREIGN KEY (process_type)
+  REFERENCES public.hr_activities_type(key)
+  ON UPDATE CASCADE
+  ON DELETE RESTRICT;
 
 CREATE TABLE IF NOT EXISTS public.hr_activities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

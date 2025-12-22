@@ -5,7 +5,6 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
-import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -35,21 +34,14 @@ interface UserProfile {
   hr_rank: string;
 }
 
-type ApplicationStatus =
-  | 'application_pending_interview'
-  | 'application_pending_badge'
-  | 'application_hired'
-  | 'application_on_hold'
-  | 'application_closed'
-  | 'application_denied'
-  | 'application_blacklisted';
-
 export default function ApplicationsPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [autoFillHr, setAutoFillHr] = useState(true);
   const [generatedBBC, setGeneratedBBC] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus>('application_pending_interview');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<ProcessTypeOption[]>([]);
+  const [processTypeOptionsLoading, setProcessTypeOptionsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [logCopied, setLogCopied] = useState(false);
@@ -77,15 +69,42 @@ export default function ApplicationsPage() {
     fetchData();
   }, []);
 
-  const processTypeOptions: ProcessTypeOption[] = [
-    { value: 'application_pending_interview', label: PROCESS_LABELS.get('application_pending_interview' as ProcessType) ?? 'Application - Pending Interview' },
-    { value: 'application_pending_badge', label: PROCESS_LABELS.get('application_pending_badge' as ProcessType) ?? 'Application - Pending Badge' },
-    { value: 'application_hired', label: PROCESS_LABELS.get('application_hired' as ProcessType) ?? 'Application - Hired' },
-    { value: 'application_on_hold', label: PROCESS_LABELS.get('application_on_hold' as ProcessType) ?? 'Application - On Hold' },
-    { value: 'application_closed', label: PROCESS_LABELS.get('application_closed' as ProcessType) ?? 'Application - Closed' },
-    { value: 'application_denied', label: PROCESS_LABELS.get('application_denied' as ProcessType) ?? 'Application - Denied' },
-    { value: 'application_blacklisted', label: PROCESS_LABELS.get('application_blacklisted' as ProcessType) ?? 'Application - Blacklisted' },
-  ];
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      setProcessTypeOptionsLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', 'application')
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setSelectedStatus('');
+          return;
+        }
+
+        const options: ProcessTypeOption[] = (data ?? []).map((row) => ({
+          value: row.key,
+          label: row.label?.trim() ? row.label : row.key,
+        }));
+
+        setProcessTypeOptions(options);
+        setSelectedStatus((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } finally {
+        setProcessTypeOptionsLoading(false);
+      }
+    };
+
+    loadProcessOptions();
+  }, []);
 
   const showInterviewLog = selectedStatus === 'application_pending_interview';
 
@@ -147,7 +166,7 @@ export default function ApplicationsPage() {
               processTypeLabel="Application Status"
               processTypeOptions={processTypeOptions}
               providedValues={providedValues}
-              onProcessTypeChange={(processType) => setSelectedStatus(processType as ApplicationStatus)}
+              onProcessTypeChange={(processType) => setSelectedStatus(processType)}
               onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
               primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
               onPrimaryAction={async ({ generatedBBC }) => {

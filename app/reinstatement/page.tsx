@@ -5,7 +5,6 @@ import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
 import Sidebar from '@/components/Sidebar';
-import { PROCESS_LABELS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -25,47 +24,12 @@ type UserProfile = {
   hr_rank: string;
 };
 
-type ReinstatementStatus =
-  | 'reinstatement_on_hold'
-  | 'reinstatement_pending_recommendations'
-  | 'reinstatement_pending_exam'
-  | 'reinstatement_pending_badge'
-  | 'reinstatement_exam_failed'
-  | 'reinstatement_denied';
-
-const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
-  {
-    value: 'reinstatement_on_hold',
-    label: PROCESS_LABELS.get('reinstatement_on_hold' as ProcessType) ?? 'Reinstatement - On Hold',
-  },
-  {
-    value: 'reinstatement_pending_recommendations',
-    label:
-      PROCESS_LABELS.get('reinstatement_pending_recommendations' as ProcessType) ??
-      'Reinstatement - Pending Recommendations',
-  },
-  {
-    value: 'reinstatement_pending_exam',
-    label: PROCESS_LABELS.get('reinstatement_pending_exam' as ProcessType) ?? 'Reinstatement - Pending Exam',
-  },
-  {
-    value: 'reinstatement_pending_badge',
-    label: PROCESS_LABELS.get('reinstatement_pending_badge' as ProcessType) ?? 'Reinstatement - Pending Badge',
-  },
-  {
-    value: 'reinstatement_exam_failed',
-    label: PROCESS_LABELS.get('reinstatement_exam_failed' as ProcessType) ?? 'Reinstatement - Exam Failed',
-  },
-  {
-    value: 'reinstatement_denied',
-    label: PROCESS_LABELS.get('reinstatement_denied' as ProcessType) ?? 'Reinstatement - Denied',
-  },
-];
-
 export default function ReinstatementPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<ReinstatementStatus>('reinstatement_on_hold');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<ProcessTypeOption[]>([]);
+  const [processTypeOptionsLoading, setProcessTypeOptionsLoading] = useState(false);
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [saving, setSaving] = useState(false);
   const [logCopied, setLogCopied] = useState(false);
@@ -90,6 +54,43 @@ export default function ReinstatementPage() {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      setProcessTypeOptionsLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', 'reinstatement')
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setSelectedStatus('');
+          return;
+        }
+
+        const options: ProcessTypeOption[] = (data ?? []).map((row) => ({
+          value: row.key,
+          label: row.label?.trim() ? row.label : row.key,
+        }));
+
+        setProcessTypeOptions(options);
+        setSelectedStatus((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } finally {
+        setProcessTypeOptionsLoading(false);
+      }
+    };
+
+    loadProcessOptions();
   }, []);
 
   const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
@@ -151,9 +152,9 @@ export default function ReinstatementPage() {
                 description="Fill the inputs below. Fields are defined in the BBC Templates editor."
                 initialProcessType={selectedStatus}
                 processTypeLabel="Reinstatement Status"
-                processTypeOptions={PROCESS_TYPE_OPTIONS}
+                processTypeOptions={processTypeOptions}
                 providedValues={providedValues}
-                onProcessTypeChange={(processType) => setSelectedStatus(processType as ReinstatementStatus)}
+                onProcessTypeChange={(processType) => setSelectedStatus(processType)}
                 onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {

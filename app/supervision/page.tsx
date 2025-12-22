@@ -32,27 +32,12 @@ type UserProfile = {
   hr_rank: string;
 };
 
-type SupervisionStatus =
-  | 'supervision'
-  | 'supervision_interview'
-  | 'supervision_orentation'
-  | 'supervision_practical'
-  | 'supervision_reinstatement_exam'
-  | 'supervision_exam';
-
-const PROCESS_TYPE_OPTIONS: ProcessTypeOption[] = [
-  { value: 'supervision', label: 'General' },
-  { value: 'supervision_interview', label: 'Interview' },
-  { value: 'supervision_orentation', label: 'Orentation' },
-  { value: 'supervision_practical', label: 'Practical' },
-  { value: 'supervision_reinstatement_exam', label: 'Reinstatement Exam' },
-  { value: 'supervision_exam', label: 'Exam' },
-];
-
 export default function SupervisionPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
-  const [selectedStatus, setSelectedStatus] = useState<SupervisionStatus>('supervision');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<ProcessTypeOption[]>([]);
+  const [processTypeOptionsLoading, setProcessTypeOptionsLoading] = useState(false);
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [copiedLog, setCopiedLog] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -78,6 +63,43 @@ export default function SupervisionPage() {
     };
 
     load();
+  }, []);
+
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      setProcessTypeOptionsLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', 'supervision')
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setSelectedStatus('');
+          return;
+        }
+
+        const options: ProcessTypeOption[] = (data ?? []).map((row) => ({
+          value: row.key,
+          label: row.label?.trim() ? row.label : row.key,
+        }));
+
+        setProcessTypeOptions(options);
+        setSelectedStatus((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } finally {
+        setProcessTypeOptionsLoading(false);
+      }
+    };
+
+    loadProcessOptions();
   }, []);
 
   useEffect(() => {
@@ -154,9 +176,9 @@ export default function SupervisionPage() {
               description="Fill the inputs below. Fields are defined in the BBC Templates editor."
               initialProcessType={selectedStatus}
               processTypeLabel="Session Type"
-              processTypeOptions={PROCESS_TYPE_OPTIONS}
+              processTypeOptions={processTypeOptions}
               providedValues={providedValues}
-              onProcessTypeChange={(processType) => setSelectedStatus(processType as SupervisionStatus)}
+              onProcessTypeChange={(processType) => setSelectedStatus(processType)}
               onGeneratedChange={(bbc) => setGeneratedBBC(bbc)}
               primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
               onPrimaryAction={async ({ generatedBBC }) => {

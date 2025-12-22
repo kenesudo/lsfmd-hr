@@ -6,22 +6,31 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
-import { PROCESS_OPTIONS, type ProcessType } from '@/lib/hrProcesses';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile';
+
 type LogRow = {
   id: string;
-  process_type: ProcessType;
+  process_type: string;
   content: string;
   created_at: string;
 };
 
-const PROCESS_SELECT_OPTIONS = [...PROCESS_OPTIONS];
+const GROUP_OPTIONS: { value: ProcessGroup; label: string }[] = [
+  { value: 'application', label: 'Application' },
+  { value: 'reinstatement', label: 'Reinstatement' },
+  { value: 'supervision', label: 'Supervision' },
+  { value: 'trainings', label: 'Trainings' },
+  { value: 'employee_profile', label: 'Employee Profile' },
+];
 
 export default function CommanderMarkdownLogsPage() {
-  const [processType, setProcessType] = useState<ProcessType>('application_pending_interview');
+  const [processGroup, setProcessGroup] = useState<ProcessGroup>('application');
+  const [processType, setProcessType] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<{ value: string; label: string }[]>([]);
   const [rows, setRows] = useState<LogRow[]>([]);
 
   const [content, setContent] = useState('');
@@ -29,6 +38,44 @@ export default function CommanderMarkdownLogsPage() {
   const [saving, setSaving] = useState(false);
 
   const row = useMemo(() => rows.find((r) => r.process_type === processType) ?? null, [rows, processType]);
+
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', processGroup)
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setProcessType('');
+          return;
+        }
+
+        const options = (data ?? []).map((r: any) => ({
+          value: r.key as string,
+          label: (typeof r.label === 'string' && r.label.trim() ? r.label : r.key) as string,
+        }));
+
+        setProcessTypeOptions(options);
+        setProcessType((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to load process options');
+        setProcessTypeOptions([]);
+        setProcessType('');
+      }
+    };
+
+    loadProcessOptions();
+  }, [processGroup]);
 
   useEffect(() => {
     const load = async () => {
@@ -121,10 +168,17 @@ export default function CommanderMarkdownLogsPage() {
             <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4">
               <div className="space-y-4">
                 <Select
+                  label="Process Group"
+                  value={processGroup}
+                  onChange={(e) => setProcessGroup(e.target.value as ProcessGroup)}
+                  options={GROUP_OPTIONS}
+                />
+
+                <Select
                   label="Process Type"
                   value={processType}
-                  onChange={(e) => setProcessType(e.target.value as ProcessType)}
-                  options={PROCESS_SELECT_OPTIONS}
+                  onChange={(e) => setProcessType(e.target.value)}
+                  options={processTypeOptions}
                 />
 
                 <Input
