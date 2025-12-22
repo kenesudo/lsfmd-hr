@@ -10,11 +10,7 @@ type Body = {
 
 export async function PATCH(
   request: NextRequest,
-  context: {
-    params?: {
-      id?: string;
-    };
-  },
+  context: { params: Promise<{ id: string }> },
 ) {
   const authResult = await ensureCommander(request);
   if ('errorResponse' in authResult) {
@@ -23,8 +19,9 @@ export async function PATCH(
 
   const { admin, userId } = authResult;
 
+  const { id } = await context.params;
   const activityId =
-    context.params?.id || (() => {
+    id || (() => {
       const url = new URL(request.url);
       const parts = url.pathname.split('/');
       return parts[parts.length - 1] || null;
