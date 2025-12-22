@@ -5,13 +5,35 @@ import Input from '@/components/Input';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { isValidUsername, usernameToEmail } from '@/lib/username';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+
+function SearchParamsWrapper({ children }: { children: (next: string) => React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const next = useMemo(() => searchParams.get('next') || '/dashboard', [searchParams]);
+  return <>{children(next)}</>;
+}
 
 export default function LoginPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-card border border-border rounded-lg p-8 shadow-sm">
+          <div className="animate-pulse">
+            <div className="h-8 bg-muted rounded mb-2"></div>
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchParamsWrapper>
+        {(next) => <LoginForm next={next} />}
+      </SearchParamsWrapper>
+    </Suspense>
+  );
+}
 
-  const next = useMemo(() => searchParams.get('next') || '/dashboard', [searchParams]);
+function LoginForm({ next }: { next: string }) {
+  const router = useRouter();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
