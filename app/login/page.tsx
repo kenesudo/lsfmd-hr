@@ -5,7 +5,7 @@ import Input from '@/components/Input';
 import Navbar from '@/components/Navbar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { isValidUsername, usernameToEmail } from '@/lib/username';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 
 function SearchParamsWrapper({ children }: { children: (next: string) => React.ReactNode }) {
@@ -34,8 +34,6 @@ export default function LoginPage() {
 }
 
 function LoginForm({ next }: { next: string }) {
-  const router = useRouter();
-
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -43,6 +41,7 @@ function LoginForm({ next }: { next: string }) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError(null);
 
@@ -74,13 +73,11 @@ function LoginForm({ next }: { next: string }) {
       } = await supabase.auth.getUser();
 
       if (user?.user_metadata?.must_change_password) {
-        router.replace('/change-password');
-        router.refresh();
+        window.location.assign('/change-password');
         return;
       }
 
-      router.replace(next);
-      router.refresh();
+      window.location.assign(next);
     } finally {
       setLoading(false);
     }
