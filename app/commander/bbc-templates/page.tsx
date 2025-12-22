@@ -14,7 +14,8 @@ type TemplateGroup =
   | 'reinstatement'
   | 'trainings'
   | 'employee_profile_creation'
-  | 'employee_profile_update';
+  | 'employee_profile_update'
+  | 'supervision';
 
 type TemplateRow = {
   id: string;
@@ -28,6 +29,7 @@ const GROUP_OPTIONS: { value: TemplateGroup; label: string }[] = [
   { value: 'trainings', label: 'Trainings' },
   { value: 'employee_profile_creation', label: 'Employee Profile (Creation)' },
   { value: 'employee_profile_update', label: 'Employee Profile (Update)' },
+  { value: 'supervision', label: 'Supervisions' },
 ];
 
 export default function CommanderBBCTemplatesPage() {

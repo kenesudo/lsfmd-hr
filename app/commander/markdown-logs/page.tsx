@@ -29,7 +29,8 @@ type ProcessType =
   | 'training_exam'
   | 'training_tf_creation'
   | 'training_tf_closure'
-  | 'lr_interview';
+  | 'lr_interview'
+  | 'supervision';
 
 type LogRow = {
   id: string;
@@ -59,6 +60,7 @@ const PROCESS_OPTIONS: { value: ProcessType; label: string }[] = [
   { value: 'training_tf_creation', label: 'Training File - Creation' },
   { value: 'training_tf_closure', label: 'Training File - Closure' },
   { value: 'lr_interview', label: 'LR Interview' },
+  { value: 'supervision', label: 'Supervision' },
 ];
 
 export default function CommanderMarkdownLogsPage() {
