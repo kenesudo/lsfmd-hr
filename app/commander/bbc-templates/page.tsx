@@ -1,5 +1,6 @@
 'use client';
 
+import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
@@ -7,8 +8,9 @@ import Input from '@/components/Input';
 import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Textarea from '@/components/Textarea';
+import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile';
@@ -96,9 +98,13 @@ export default function CommanderBBCTemplatesPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [showPreview, setShowPreview] = useState(true);
+
   const [fields, setFields] = useState<TemplateFieldDraft[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [fieldsSaving, setFieldsSaving] = useState(false);
+
+  const autoSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const row = useMemo(() => rows.find((r) => r.process_type === processType) ?? null, [rows, processType]);
 
@@ -261,11 +267,44 @@ export default function CommanderBBCTemplatesPage() {
     return extractPlaceholders(draft);
   }, [draft]);
 
-  const addMissingFields = () => {
+  const previewHtml = useMemo(() => {
+    return renderBbcode(draft);
+  }, [draft]);
+
+  const addMissingFieldsForKeys = (keys: string[], silent?: boolean) => {
     if (!row) {
-      toast.error('Create this template first before syncing fields.');
+      if (!silent) toast.error('Create this template first before syncing fields.');
       return;
     }
+
+    setFields((prev) => {
+      const existing = new Set(prev.map((f) => f.field_key));
+      const missing = keys.filter((key) => !existing.has(key));
+      if (missing.length === 0) return prev;
+
+      const maxOrder = prev.reduce((acc, f) => Math.max(acc, f.sort_order), 0);
+      const next = [...prev];
+      missing.forEach((key, index) => {
+        const isList = LIST_LIKE_KEYS.has(key);
+        next.push({
+          field_key: key,
+          label: titleizeKey(key),
+          field_type: isList ? 'textarea' : 'text',
+          required: false,
+          placeholder: '',
+          default_value: '',
+          transform: isList ? 'bbc_list' : 'raw',
+          optionsText: '',
+          sort_order: maxOrder + index + 1,
+        });
+      });
+
+      if (!silent) toast.success(`Added ${missing.length} field(s)`);
+      return next;
+    });
+  };
+
+  const addMissingFields = () => {
     const existing = new Set(fields.map((f) => f.field_key));
     const missing = detectedKeys.filter((key) => !existing.has(key));
     if (missing.length === 0) {
@@ -273,26 +312,27 @@ export default function CommanderBBCTemplatesPage() {
       return;
     }
 
-    const maxOrder = fields.reduce((acc, f) => Math.max(acc, f.sort_order), 0);
-    const next = [...fields];
-    missing.forEach((key, index) => {
-      const isList = LIST_LIKE_KEYS.has(key);
-      next.push({
-        field_key: key,
-        label: titleizeKey(key),
-        field_type: isList ? 'textarea' : 'text',
-        required: false,
-        placeholder: '',
-        default_value: '',
-        transform: isList ? 'bbc_list' : 'raw',
-        optionsText: '',
-        sort_order: maxOrder + index + 1,
-      });
-    });
-
-    setFields(next);
-    toast.success(`Added ${missing.length} field(s)`);
+    addMissingFieldsForKeys(missing);
   };
+
+  useEffect(() => {
+    if (!row) return;
+
+    if (autoSyncTimeoutRef.current) {
+      clearTimeout(autoSyncTimeoutRef.current);
+    }
+
+    autoSyncTimeoutRef.current = setTimeout(() => {
+      addMissingFieldsForKeys(detectedKeys, true);
+    }, 500);
+
+    return () => {
+      if (autoSyncTimeoutRef.current) {
+        clearTimeout(autoSyncTimeoutRef.current);
+        autoSyncTimeoutRef.current = null;
+      }
+    };
+  }, [detectedKeys, row?.id]);
 
   const updateField = (index: number, patch: Partial<TemplateFieldDraft>) => {
     setFields((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -425,10 +465,38 @@ export default function CommanderBBCTemplatesPage() {
                 placeholder="Template code"
               />
 
+              <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                <Checkbox
+                  label="Show preview"
+                  checked={showPreview}
+                  onChange={(e) => setShowPreview(e.target.checked)}
+                />
+              </div>
+
+              {showPreview ? (
+                <div className="mt-3 rounded-md border border-border bg-secondary p-4">
+                  <p className="text-sm font-semibold text-foreground">Preview</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This preview renders BBCode only. Variables like <span className="font-mono">{'{{var}}'}</span> will remain as-is.
+                  </p>
+                  <div className="mt-3 h-[420px]">
+                    <BbcodePreview html={previewHtml} title="BBC template preview" />
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-4 rounded-md border border-border bg-muted/20 p-4">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Detected variables</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">Detected variables</p>
+                      <span
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-border text-xs text-muted-foreground"
+                        title="Tip: {{hr_name}} and {{hr_rank}} are special-cased on user pages and can be auto-filled when 'Auto-fill HR name/rank' is enabled."
+                      >
+                        i
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {detectedKeys.length === 0
                         ? 'No {{variables}} detected in this template.'

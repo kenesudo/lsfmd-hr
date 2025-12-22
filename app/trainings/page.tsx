@@ -27,10 +27,8 @@ export default function TrainingsPage() {
   const [saving, setSaving] = useState(false);
 
   const [logCopied, setLogCopied] = useState(false);
-  const [tfLogCopied, setTfLogCopied] = useState(false);
-
-  const trainingLogMarkdown = `**Task Performed: Orientation / Practical Training / Exam:**\n**Trainee's Name:**\n**Trainee's Training File:**`;
-  const tfLogMarkdown = `**Task Performed::** TF Creation/TF Closure\n**Trainee's Name:**\n**Trainee's Training File:**`;
+  const [logMarkdown, setLogMarkdown] = useState('');
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,22 +88,44 @@ export default function TrainingsPage() {
     loadProcessOptions();
   }, []);
 
-  const handleCopyTrainingLog = async () => {
+  useEffect(() => {
+    const fetchLogMarkdown = async () => {
+      if (!selectedStatus) {
+        setLogMarkdown('');
+        return;
+      }
+
+      setLogLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('log_markdowns')
+          .select('content')
+          .eq('process_type', selectedStatus)
+          .maybeSingle();
+
+        if (error) throw error;
+        setLogMarkdown(data?.content ?? '');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load log markdown');
+        setLogMarkdown('');
+      } finally {
+        setLogLoading(false);
+      }
+    };
+
+    fetchLogMarkdown();
+  }, [selectedStatus]);
+
+  const handleCopyLog = async () => {
+    if (!logMarkdown) {
+      toast.error('No log markdown available for this status');
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(trainingLogMarkdown);
+      await navigator.clipboard.writeText(logMarkdown);
       setLogCopied(true);
       setTimeout(() => setLogCopied(false), 2000);
-      toast.success('Log copied');
-    } catch {
-      toast.error('Failed to copy log');
-    }
-  };
-
-  const handleCopyTfLog = async () => {
-    try {
-      await navigator.clipboard.writeText(tfLogMarkdown);
-      setTfLogCopied(true);
-      setTimeout(() => setTfLogCopied(false), 2000);
       toast.success('Log copied');
     } catch {
       toast.error('Failed to copy log');
@@ -173,7 +193,6 @@ export default function TrainingsPage() {
 
                     toast.success('Saved successfully');
                     setLogCopied(false);
-                    setTfLogCopied(false);
                   } finally {
                     setSaving(false);
                   }
@@ -183,33 +202,21 @@ export default function TrainingsPage() {
               <div className="mt-6 bg-card border border-border rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Logging Section</h2>
 
-                {generatedBBC ? (
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <Button onClick={handleCopyTrainingLog} className="flex-1">
-                        {logCopied ? '✓ Copied!' : 'Copy Log'}
-                      </Button>
-                      <Button onClick={handleCopyTfLog} className="flex-1" variant="outline">
-                        {tfLogCopied ? '✓ Copied!' : 'Copy TF Log'}
-                      </Button>
-                    </div>
+                <Button onClick={handleCopyLog} className="w-full" disabled={logLoading || !logMarkdown}>
+                  {logCopied ? '✓ Copied!' : 'Copy Log Markdown'}
+                </Button>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-3 bg-secondary rounded-md">
-                        <div className="text-sm text-foreground overflow-x-auto">
-                          <pre className="whitespace-pre-wrap">{trainingLogMarkdown}</pre>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-secondary rounded-md">
-                        <div className="text-sm text-foreground overflow-x-auto">
-                          <pre className="whitespace-pre-wrap">{tfLogMarkdown}</pre>
-                        </div>
-                      </div>
+                <div className="mt-3 p-3 bg-secondary rounded-md">
+                  {logLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading log markdown…</p>
+                  ) : logMarkdown ? (
+                    <div className="text-sm text-foreground overflow-x-auto">
+                      <pre className="whitespace-pre-wrap">{logMarkdown}</pre>
                     </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Generate a template to show the log markdown.</p>
-                )}
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No markdown found for this status.</p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

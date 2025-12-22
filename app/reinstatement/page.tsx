@@ -18,6 +18,14 @@ function escapeHtml(input: string) {
     .replaceAll("'", '&#39;');
 }
 
+function markdownToHtml(markdown: string) {
+  let s = escapeHtml(markdown);
+  s = s.replaceAll(/\*\*([^\n*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replaceAll(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noreferrer" style="text-decoration:underline">$1</a>');
+  s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
+  return s;
+}
+
 type UserProfile = {
   id: string;
   full_name: string;
@@ -33,7 +41,8 @@ export default function ReinstatementPage() {
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [saving, setSaving] = useState(false);
   const [logCopied, setLogCopied] = useState(false);
-  const [interviewLogCopied, setInterviewLogCopied] = useState(false);
+  const [logMarkdown, setLogMarkdown] = useState('');
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -93,12 +102,40 @@ export default function ReinstatementPage() {
     loadProcessOptions();
   }, []);
 
-  const logMarkdown = `**Reinstatement: Response / Review**\n**Application Link:**\n**Status:**`;
-  const interviewLogMarkdown = `Interview\n**Applicant Name:**\n**Application Link:**\n**Screenshot:**\n**Status:**`;
+  useEffect(() => {
+    const fetchLogMarkdown = async () => {
+      if (!selectedStatus) {
+        setLogMarkdown('');
+        return;
+      }
 
-  const showInterviewLog = selectedStatus === 'reinstatement_pending_exam';
+      setLogLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('log_markdowns')
+          .select('content')
+          .eq('process_type', selectedStatus)
+          .maybeSingle();
+
+        if (error) throw error;
+        setLogMarkdown(data?.content ?? '');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load log markdown');
+        setLogMarkdown('');
+      } finally {
+        setLogLoading(false);
+      }
+    };
+
+    fetchLogMarkdown();
+  }, [selectedStatus]);
 
   const handleCopyLog = async () => {
+    if (!logMarkdown) {
+      toast.error('No log markdown available for this status');
+      return;
+    }
     try {
       await navigator.clipboard.writeText(logMarkdown);
       setLogCopied(true);
@@ -106,17 +143,6 @@ export default function ReinstatementPage() {
       toast.success('Log copied');
     } catch {
       toast.error('Failed to copy log');
-    }
-  };
-
-  const handleCopyInterviewLog = async () => {
-    try {
-      await navigator.clipboard.writeText(interviewLogMarkdown);
-      setInterviewLogCopied(true);
-      setTimeout(() => setInterviewLogCopied(false), 2000);
-      toast.success('Interview log copied');
-    } catch {
-      toast.error('Failed to copy interview log');
     }
   };
 
@@ -181,7 +207,6 @@ export default function ReinstatementPage() {
 
                     toast.success('Saved successfully');
                     setLogCopied(false);
-                    setInterviewLogCopied(false);
                   } finally {
                     setSaving(false);
                   }
@@ -191,41 +216,22 @@ export default function ReinstatementPage() {
               <div className="mt-6 bg-card border border-border rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Logging Section</h2>
 
-                {generatedBBC ? (
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Button onClick={handleCopyLog} className="w-full">
-                          {logCopied ? '✓ Copied!' : 'Copy Log'}
-                        </Button>
-                      </div>
+                <Button onClick={handleCopyLog} className="w-full" disabled={logLoading || !logMarkdown}>
+                  {logCopied ? '✓ Copied!' : 'Copy Log Markdown'}
+                </Button>
 
-                      <div className="p-3 bg-secondary rounded-md">
-                        <div className="text-sm text-foreground overflow-x-auto">
-                          <pre className="whitespace-pre-wrap">{logMarkdown}</pre>
-                        </div>
-                      </div>
-                    </div>
-
-                    {showInterviewLog && (
-                      <div className="space-y-3">
-                        <div className="flex gap-2">
-                          <Button onClick={handleCopyInterviewLog} className="w-full" variant="outline">
-                            {interviewLogCopied ? '✓ Copied!' : 'Copy Interview Log'}
-                          </Button>
-                        </div>
-
-                        <div className="p-3 bg-secondary rounded-md">
-                          <div className="text-sm text-foreground overflow-x-auto">
-                            <pre className="whitespace-pre-wrap">{interviewLogMarkdown}</pre>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Generate a template to show the log markdown.</p>
-                )}
+                <div className="mt-3 p-3 bg-secondary rounded-md">
+                  {logLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading log markdown…</p>
+                  ) : logMarkdown ? (
+                    <div
+                      className="text-sm text-foreground overflow-x-auto"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No markdown found for this status.</p>
+                  )}
+                </div>
               </div>
             </div>
           </main>

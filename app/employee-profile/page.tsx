@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
@@ -8,19 +9,40 @@ import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+function escapeHtml(input: string) {
+  return input
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function markdownToHtml(markdown: string) {
+  let s = escapeHtml(markdown);
+  s = s.replaceAll(/\*\*([^\n*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replaceAll(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noreferrer" style="text-decoration:underline">$1</a>');
+  s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
+  return s;
+}
+
 type UserProfile = {
   id: string;
   full_name: string;
   hr_rank: string;
 };
 
-type ActiveTab = 'creation' | 'update';
-
 export default function EmployeeProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('creation');
   const [autoFillHr, setAutoFillHr] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [processType, setProcessType] = useState('');
+  const [processTypeOptions, setProcessTypeOptions] = useState<ProcessTypeOption[]>([]);
+
+  const [logCopied, setLogCopied] = useState(false);
+  const [logMarkdown, setLogMarkdown] = useState('');
+  const [logLoading, setLogLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +71,44 @@ export default function EmployeeProfilePage() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const loadProcessOptions = async () => {
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('hr_activities_type')
+          .select('key, label')
+          .eq('process_group', 'employee_profile')
+          .order('label', { ascending: true })
+          .order('key', { ascending: true });
+
+        if (error) {
+          toast.error(error.message || 'Failed to load process options');
+          setProcessTypeOptions([]);
+          setProcessType('');
+          return;
+        }
+
+        const options: ProcessTypeOption[] = (data ?? []).map((row: any) => ({
+          value: row.key as string,
+          label: typeof row.label === 'string' && row.label.trim() ? (row.label as string) : (row.key as string),
+        }));
+
+        setProcessTypeOptions(options);
+        setProcessType((prev) => {
+          if (prev && options.some((o) => o.value === prev)) return prev;
+          return options[0]?.value ?? '';
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load process options');
+        setProcessTypeOptions([]);
+        setProcessType('');
+      }
+    };
+
+    loadProcessOptions();
+  }, []);
   const providedValues: Record<string, string> | undefined = autoFillHr
     ? {
         hr_rank: profile?.hr_rank ?? '',
@@ -56,12 +116,51 @@ export default function EmployeeProfilePage() {
       }
     : undefined;
 
-  const processType = activeTab === 'creation' ? 'employee_profile_creation' : 'employee_profile_update';
-  const title = activeTab === 'creation' ? 'Profile Creation' : 'Update Logs';
+  useEffect(() => {
+    setLogCopied(false);
+    const fetchLogMarkdown = async () => {
+      if (!processType) {
+        setLogMarkdown('');
+        return;
+      }
 
-  const processTypeOptions: ProcessTypeOption[] = [
-    { value: processType, label: title },
-  ];
+      setLogLoading(true);
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from('log_markdowns')
+          .select('content')
+          .eq('process_type', processType)
+          .maybeSingle();
+
+        if (error) throw error;
+        setLogMarkdown(data?.content ?? '');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load log markdown');
+        setLogMarkdown('');
+      } finally {
+        setLogLoading(false);
+      }
+    };
+
+    fetchLogMarkdown();
+  }, [processType]);
+
+  const handleCopyLog = async () => {
+    if (!logMarkdown) {
+      toast.error('No log markdown available for this tab');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(logMarkdown);
+      setLogCopied(true);
+      setTimeout(() => setLogCopied(false), 2000);
+      toast.success('Log markdown copied');
+    } catch {
+      toast.error('Failed to copy log markdown');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -76,28 +175,6 @@ export default function EmployeeProfilePage() {
                   <h1 className="text-3xl font-bold text-foreground">Employee Profiles</h1>
                   <p className="text-muted-foreground">Fields are defined in the BBC Templates editor.</p>
                 </div>
-                <div className="inline-flex rounded-md border border-border overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('creation')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeTab === 'creation'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Profile Creation
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('update')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeTab === 'update' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Update Logs
-                  </button>
-                </div>
               </div>
 
               <div>
@@ -109,11 +186,13 @@ export default function EmployeeProfilePage() {
               </div>
 
               <DynamicBbcTemplateRunner
-                title={title}
+                title="Employee Profile"
                 description="Fill the inputs below. If a {{variable}} exists in the template, it must have a field definition in the editor."
                 initialProcessType={processType}
+                processTypeLabel="Process"
                 processTypeOptions={processTypeOptions}
                 providedValues={providedValues}
+                onProcessTypeChange={(pt) => setProcessType(pt)}
                 primaryActionLabel={saving ? 'Saving…' : 'Save Activity'}
                 onPrimaryAction={async ({ generatedBBC }) => {
                   setSaving(true);
@@ -144,6 +223,27 @@ export default function EmployeeProfilePage() {
                   }
                 }}
               />
+
+              <div className="mt-6 bg-card border border-border rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-foreground mb-4">Log Markdown</h2>
+
+                <Button onClick={handleCopyLog} variant="outline" className="w-full" disabled={logLoading || !logMarkdown}>
+                  {logCopied ? '✓ Copied!' : 'Copy Log Markdown'}
+                </Button>
+
+                <div className="mt-3 p-3 bg-secondary rounded-md">
+                  {logLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading log markdown…</p>
+                  ) : logMarkdown ? (
+                    <div
+                      className="text-sm text-foreground whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
+                    />
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No markdown found for this tab.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </main>
         </div>
