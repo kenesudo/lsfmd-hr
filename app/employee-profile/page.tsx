@@ -1,5 +1,6 @@
 'use client';
 
+import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
@@ -9,91 +10,6 @@ import { renderBbcode } from '@/lib/bbcode';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-
-function escapeHtml(input: string) {
-  return input
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function safeUrl(url: string) {
-  const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return '';
-}
-
-function bbcodeToHtml(bbcode: string) {
-  let s = escapeHtml(bbcode.trimStart());
-
-  s = s.replaceAll(/\[b\]/gi, '<strong>');
-  s = s.replaceAll(/\[\/b\]/gi, '</strong>');
-  s = s.replaceAll(/\[i\]/gi, '<em>');
-  s = s.replaceAll(/\[\/i\]/gi, '</em>');
-  s = s.replaceAll(/\[u\]/gi, '<u>');
-  s = s.replaceAll(/\[\/u\]/gi, '</u>');
-
-  s = s.replaceAll(/\[center\]/gi, '<div style="text-align:center">');
-  s = s.replaceAll(/\[\/center\]/gi, '</div>');
-  s = s.replaceAll(/\[left\]/gi, '<div style="text-align:left">');
-  s = s.replaceAll(/\[\/left\]/gi, '</div>');
-  s = s.replaceAll(/\[right\]/gi, '<div style="text-align:right">');
-  s = s.replaceAll(/\[indent\]/gi, '<div style="margin-left:1rem">');
-  s = s.replaceAll(/\[\/indent\]/gi, '</div>');
-
-  s = s.replaceAll(/\[color=([^\]]+)\]/gi, (_m, c) => `<span style="color:${String(c).trim()}">`);
-  s = s.replaceAll(/\[color="([^\"]+)"\]/gi, (_m, c) => `<span style="color:${String(c).trim()}">`);
-  s = s.replaceAll(/\[\/color\]/gi, '</span>');
-  s = s.replaceAll(/\[size=([^\]]+)\]/gi, (_m, sz) => {
-    const raw = String(sz).trim();
-    const n = Number(raw);
-    const px = Number.isFinite(n) ? Math.max(10, Math.min(32, n * 4 + 8)) : 14;
-    return `<span style="font-size:${px}px">`;
-  });
-  s = s.replaceAll(/\[\/size\]/gi, '</span>');
-
-  s = s.replaceAll(/\[quote\]/gi, '<blockquote style="border-left:3px solid rgba(220,20,60,0.5); padding-left:12px; margin:12px 0; opacity:0.95">');
-  s = s.replaceAll(/\[\/quote\]/gi, '</blockquote>');
-
-  s = s.replaceAll(/\[url=([^\]]+)\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '<span>';
-    return `<a href="${safe}" target="_blank" rel="noreferrer" style="color:inherit; text-decoration:underline">`;
-  });
-  s = s.replaceAll(/\[url="([^\"]+)"\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '<span>';
-    return `<a href="${safe}" target="_blank" rel="noreferrer" style="color:inherit; text-decoration:underline">`;
-  });
-  s = s.replaceAll(/\[\/url\]/gi, '</a>');
-
-  s = s.replaceAll(/\[img\]([\s\S]*?)\[\/img\]/gi, (_m, url) => {
-    const safe = safeUrl(String(url));
-    if (!safe) return '';
-    return `<img src="${safe}" alt="" style="max-width:100%; height:auto; display:block; margin:0 auto;" />`;
-  });
-
-  s = s.replaceAll(/\[table[^\]]*\]/gi, '<table style="width:100%; border-collapse:collapse">');
-  s = s.replaceAll(/\[\/table\]/gi, '</table>');
-  s = s.replaceAll(/\[tr[^\]]*\]/gi, '<tr>');
-  s = s.replaceAll(/\[\/tr\]/gi, '</tr>');
-  s = s.replaceAll(/\[td[^\]]*\]/gi, '<td style="vertical-align:top">');
-  s = s.replaceAll(/\[\/td\]/gi, '</td>');
-
-  s = s.replaceAll(/\[list\]/gi, '<ul style="padding-left:1.25rem; list-style:disc">');
-  s = s.replaceAll(/\[\/list\]/gi, '</ul>');
-  s = s.replaceAll(/\[\*\]\s*/g, '<li>');
-  s = s.replaceAll(/(<li>[\s\S]*?)(?=<li>|<\/ul>)/g, '$1</li>');
-
-  s = s.replaceAll(/\r\n|\r|\n/g, '<br />');
-  s = s.replace(/^(?:\s*<br \/>\s*)+/i, '');
-  s = s.replaceAll(/<br \/>\s*(?=<(?:table|tr|td|\/table|\/tr|\/td)\b)/gi, '');
-  s = s.replaceAll(/(<\/(?:td|tr|table)>)(?:\s*<br \/>\s*)+/gi, '$1');
-
-  return s;
-}
 
 function fillTemplate(template: string, values: Record<string, string>) {
   return Object.entries(values).reduce((result, [key, value]) => {
@@ -461,10 +377,7 @@ export default function EmployeeProfilePage() {
             <Textarea label="BBC Output" value={creationBBC} readOnly className="font-mono" rows={12} />
             <div className="p-4 bg-secondary rounded-md min-h-[200px]">
               {creationPreview ? (
-                <div
-                  className="text-sm text-foreground overflow-x-auto"
-                  dangerouslySetInnerHTML={{ __html: creationPreview }}
-                />
+                <BbcodePreview html={creationPreview} title="Employee profile preview" />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Fill out the fields to generate a live preview of the employee profile.
@@ -528,10 +441,7 @@ export default function EmployeeProfilePage() {
             <Textarea label="BBC Output" value={updateBBC} readOnly className="font-mono" rows={10} />
             <div className="p-4 bg-secondary rounded-md min-h-[200px]">
               {updatePreview ? (
-                <div
-                  className="text-sm text-foreground overflow-x-auto"
-                  dangerouslySetInnerHTML={{ __html: updatePreview }}
-                />
+                <BbcodePreview html={updatePreview} title="Employee update preview" />
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Provide the updated details to generate the preview.

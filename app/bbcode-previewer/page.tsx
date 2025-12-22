@@ -1,5 +1,6 @@
 'use client';
 
+import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import Sidebar from '@/components/Sidebar';
@@ -7,14 +8,7 @@ import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import { useMemo, useState } from 'react';
 
-const SAMPLE_BBCODE = `[center][size=4][b]Los Santos Fire Medical Department[/b][/size][/center]
-
-[b]Quick tips[/b]
-[list]
-[*]Use [color=#E53E3E]colors[/color], [i]formatting[/i], and [u]underlines[/u].
-[*]Add evidence links with [url=https://example.com]URL tags[/url].
-[*]Drop images via [img]https://placehold.co/240x80[/img].
-[/list]`;
+const SAMPLE_BBCODE = `[SIZE=6][COLOR=white]Hello World![/COLOR][/SIZE]`;
 
 export default function BbcodePreviewerPage() {
   const [bbcode, setBbcode] = useState(SAMPLE_BBCODE);
@@ -62,7 +56,7 @@ export default function BbcodePreviewerPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-6">
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <div>
                   <h2 className="text-xl font-semibold text-foreground">BBCode Input</h2>
@@ -103,10 +97,7 @@ export default function BbcodePreviewerPage() {
 
                 <div className="p-4 bg-secondary rounded-md min-h-[360px] overflow-auto">
                   {hasContent ? (
-                    <div
-                      className="prose prose-sm max-w-none text-foreground [&_div]:my-2 [&_img]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    />
+                    <BbcodePreview html={previewHtml} className="w-full min-h-[360px]" />
                   ) : (
                     <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center">
                       Start typing BBCode to see the formatted result.

@@ -1,5 +1,6 @@
 'use client';
 
+import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
@@ -365,10 +366,7 @@ export default function ReinstatementPage() {
 
                     {generatedBBC && (
                       <div className="mt-4 p-4 bg-secondary rounded-md">
-                        <div
-                          className="text-sm text-foreground overflow-x-auto"
-                          dangerouslySetInnerHTML={{ __html: renderBbcode(generatedBBC) }}
-                        />
+                        <BbcodePreview html={renderBbcode(generatedBBC)} title="Reinstatement BBC preview" />
                       </div>
                     )}
                   </div>
