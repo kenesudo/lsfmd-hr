@@ -200,14 +200,10 @@ export default function ApplicationsPage() {
     if (user) {
       const reasonsText = reasons.filter(r => r.trim()).join('; ');
       
-      await supabase.from('application_activities').insert({
-        user_id: user.id,
-        status: selectedStatus,
-        applicant_name: applicantName,
-        hr_rank: profile.hr_rank,
-        hr_name: profile.full_name,
-        reasons: reasonsText || null,
-        generated_bbc: generatedBBC,
+      await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: generatedBBC,
+        activity_type: 'application_response',
       });
 
       // Reset form
@@ -234,14 +230,10 @@ export default function ApplicationsPage() {
 
       const reasonsText = reasons.filter(r => r.trim()).join('; ');
 
-      const { error } = await supabase.from('application_activities').insert({
-        user_id: user.id,
-        status: selectedStatus,
-        applicant_name: applicantName,
-        hr_rank: profile.hr_rank,
-        hr_name: profile.full_name,
-        reasons: reasonsText || null,
-        generated_bbc: generatedBBC,
+      const { error } = await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: generatedBBC,
+        activity_type: 'application_response',
       });
 
       if (error) {

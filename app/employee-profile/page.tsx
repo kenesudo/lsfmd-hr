@@ -304,22 +304,10 @@ export default function EmployeeProfilePage() {
         return;
       }
 
-      const { error } = await supabase.from('employee_profile_activities').insert({
-        user_id: user.id,
-        employee_name: employeeName || 'N/A',
-        department_rank: departmentRank || 'N/A',
-        badge_number: badgeNumber || 'N/A',
-        division_assignment: divisionAssignment || 'N/A',
-        date_of_employment: dateOfEmployment || 'N/A',
-        application_link: applicationLink || '**Attachment**',
-        awards: awards || null,
-        ribbon_rack: ribbonRack || null,
-        disciplinary_record: disciplinaryRecord || null,
-        previous_name: previousName || null,
-        discord: discord || 'N/A',
-        timezone: timezone || 'N/A',
-        country_of_residence: countryOfResidence || 'N/A',
-        generated_bbc: creationBBC,
+      const { error } = await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: creationBBC,
+        activity_type: 'personnel_profile_processed',
       });
 
       if (error) throw error;
@@ -348,12 +336,10 @@ export default function EmployeeProfilePage() {
         return;
       }
 
-      const { error } = await supabase.from('employee_profile_update_activities').insert({
-        user_id: user.id,
-        updated_information: updatedInformation || 'N/A',
-        approved_by: approvedBy || 'N/A',
-        additional_information: additionalInformation || null,
-        generated_bbc: updateBBC,
+      const { error } = await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: updateBBC,
+        activity_type: 'personnel_profile_processed',
       });
 
       if (error) throw error;

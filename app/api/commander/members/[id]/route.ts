@@ -21,7 +21,7 @@ export async function PATCH(
   if ('errorResponse' in authResult) {
     return authResult.errorResponse;
   }
-  const admin = authResult.admin;
+  const { admin } = authResult;
 
   const userId =
     context.params?.id || (() => {

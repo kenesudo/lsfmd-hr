@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   if ('errorResponse' in authResult) {
     return authResult.errorResponse;
   }
-  const admin = authResult.admin;
+  const { admin } = authResult;
 
   const { data: profileData, error: profilesError } = await admin
     .from('profiles')

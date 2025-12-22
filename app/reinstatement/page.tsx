@@ -188,14 +188,10 @@ export default function ReinstatementPage() {
 
       const reasonsText = reasons.filter(r => r.trim()).join('; ');
 
-      const { error } = await supabase.from('reinstatement_activities').insert({
-        user_id: user.id,
-        status: selectedStatus,
-        applicant_name: applicantName,
-        hr_rank: profile.hr_rank,
-        hr_name: profile.full_name,
-        reasons: reasonsText || null,
-        generated_bbc: generatedBBC,
+      const { error } = await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: generatedBBC,
+        activity_type: 'reinstatement_exam',
       });
 
       if (error) {

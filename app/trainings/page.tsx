@@ -254,12 +254,17 @@ export default function TrainingsPage() {
         close_reason: closeReason,
       };
 
-      const { error } = await supabase.from('trainings_activities').insert({
-        user_id: user.id,
-        status: selectedStatus,
-        member_name: memberName,
-        details,
-        generated_bbc: generatedBBC,
+      const activityType =
+        selectedStatus === 'close'
+          ? 'training_file_closure'
+          : selectedStatus === 'creation' || selectedStatus === 'reopen'
+            ? 'training_file_creation'
+            : 'training';
+
+      const { error } = await supabase.from('hr_activities').insert({
+        hr_id: user.id,
+        bbc_content: generatedBBC,
+        activity_type: activityType,
       });
 
       if (error) {

@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 type EnsureAdminSuccess = {
   admin: ReturnType<typeof createSupabaseAdminClient>;
+  userId: string;
 };
 
 type EnsureAdminFailure = {
@@ -55,5 +56,6 @@ export const ensureCommander = async (request: NextRequest): Promise<EnsureAdmin
 
   return {
     admin: createSupabaseAdminClient(),
+    userId: user.id,
   };
 };
