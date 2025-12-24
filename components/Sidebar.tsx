@@ -35,6 +35,7 @@ type NavItem = {
 export default function Sidebar() {
   const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     utilities: true,
     supervisors: true,
@@ -91,6 +92,16 @@ export default function Sidebar() {
     
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const onToggle = () => setMobileOpen((prev) => !prev);
+    window.addEventListener('hr:sidebar-toggle', onToggle as EventListener);
+    return () => window.removeEventListener('hr:sidebar-toggle', onToggle as EventListener);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const hrNavigation: NavItem[] = [
     {
@@ -281,8 +292,8 @@ export default function Sidebar() {
     return item.allowedRoles.includes(profile.hr_rank);
   };
 
-  return (
-    <aside className="flex flex-col w-64 bg-card border-r border-border">
+  const sidebarBody = (
+    <aside className="flex flex-col w-64 bg-card border-r border-border h-full">
       <div className="flex items-center h-16 px-6 border-b border-border">
         <div className="flex items-center space-x-3">
           <div className="h-9 w-9 rounded-lg overflow-hidden border border-border bg-muted">
@@ -431,5 +442,31 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      <div className="hidden md:block">{sidebarBody}</div>
+
+      <div
+        className={`md:hidden fixed inset-0 z-40 ${mobileOpen ? '' : 'pointer-events-none'}`}
+        aria-hidden={!mobileOpen}
+      >
+        <button
+          type="button"
+          onClick={() => setMobileOpen(false)}
+          className={`absolute inset-0 bg-black/40 transition-opacity ${mobileOpen ? 'opacity-100' : 'opacity-0'}`}
+          aria-label="Close sidebar"
+        />
+
+        <div
+          className={`absolute left-0 top-0 h-full w-64 transform bg-card transition-transform ${
+            mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          {sidebarBody}
+        </div>
+      </div>
+    </>
   );
 }

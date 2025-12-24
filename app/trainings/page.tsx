@@ -4,6 +4,7 @@ import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
+import RelatedLinks from '@/components/RelatedLinks';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useRef, useState } from 'react';
@@ -158,8 +159,17 @@ export default function TrainingsPage() {
           <DashboardNavbar />
 
           <main className="flex-1 overflow-y-auto p-4">
-            <div className="max-w-7xl mx-auto">
-              <h1 className="text-3xl font-bold text-foreground mb-8">Trainings</h1>
+            <div className="max-w-6xl mx-auto space-y-6">
+              <h1 className="text-3xl font-bold text-foreground mb-6">Trainings</h1>
+
+              <RelatedLinks
+                links={[
+                  {
+                    label: 'Training Files',
+                    href: 'https://forums.hzgaming.net/forumdisplay.php/1854-Training-Files',
+                  },
+                ]}
+              />
 
               <div className="mb-4">
                 <Checkbox

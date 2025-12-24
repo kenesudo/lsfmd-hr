@@ -4,6 +4,7 @@ import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
+import RelatedLinks from '@/components/RelatedLinks';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useRef, useState } from 'react';
@@ -172,13 +173,22 @@ export default function RosterUpdatePage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardNavbar />
           <main className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6">
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div>
                   <h1 className="text-3xl font-bold text-foreground">Roster Update</h1>
-                  <p className="text-muted-foreground">Track roster updates as activities.</p>
+                  <p className="text-muted-foreground">Generate and save roster update logs.</p>
                 </div>
               </div>
+
+              <RelatedLinks
+                links={[
+                  {
+                    label: 'Roster',
+                    href: 'https://forums.hzgaming.net/showthread.php/630708-HR-Roster-edit-as-you-update-profiles',
+                  },
+                ]}
+              />
 
               <div>
                 <Checkbox

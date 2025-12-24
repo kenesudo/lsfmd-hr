@@ -5,6 +5,7 @@ import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import DynamicBbcTemplateRunner, { type ProcessTypeOption } from '@/components/DynamicBbcTemplateRunner';
+import RelatedLinks from '@/components/RelatedLinks';
 import Sidebar from '@/components/Sidebar';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useRef, useState } from 'react';
@@ -183,6 +184,19 @@ export default function EmployeeProfilePage() {
                   <p className="text-muted-foreground">Fields are defined in the BBCode Templates editor.</p>
                 </div>
               </div>
+
+              <RelatedLinks
+                links={[
+                  {
+                    label: 'Personnel Profiles',
+                    href: 'https://forums.hzgaming.net/forumdisplay.php/2559-Personnel-Profiles',
+                  },
+                  {
+                    label: 'Roster',
+                    href: 'https://forums.hzgaming.net/showthread.php/630708-HR-Roster-edit-as-you-update-profiles',
+                  },
+                ]}
+              />
 
               <Alert variant="warning">
                 <strong>Reminder:</strong> After updating an employee profile, you must also update the roster.{' '}
