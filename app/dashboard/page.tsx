@@ -15,7 +15,8 @@ type DashboardSummary = {
   completed_reviews: number;
   total_activities: number;
   total_score: number;
-  activity_breakdown: { activity_type: string; count: number }[];
+  total_salary: number;
+  activity_breakdown: { process_group: string; count: number }[];
   recent_activities: {
     id: string;
     activity_type: string;
@@ -52,6 +53,7 @@ export default function DashboardPage() {
         completed_reviews: data.completed_reviews ?? 0,
         total_activities: data.total_activities ?? 0,
         total_score: data.total_score ?? 0,
+        total_salary: data.total_salary ?? 0,
         activity_breakdown: data.activity_breakdown ?? [],
         recent_activities: data.recent_activities ?? [],
       });
@@ -91,10 +93,26 @@ export default function DashboardPage() {
           </div>
 
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <StatCard label="Total Templates" helper="Available BBC templates" value={loading ? '…' : summary?.total_templates ?? 0} />
-            <StatCard label="Total Activities" helper="Your submitted logs" value={loading ? '…' : summary?.total_activities ?? 0} />
-            <StatCard label="Pending Reviews" helper="Need commander action" value={loading ? '…' : summary?.pending_reviews ?? 0} />
-            <StatCard label="Total Score" helper="Accepted activity points" value={loading ? '…' : summary?.total_score ?? 0} />
+            <StatCard 
+              label="My Salary" 
+              helper="Total earnings from activities" 
+              value={loading ? '…' : `$${(summary?.total_salary ?? 0).toFixed(2)}`} 
+            />
+            <StatCard 
+              label="My Activities" 
+              helper="Your submitted logs" 
+              value={loading ? '…' : summary?.total_activities ?? 0} 
+            />
+            <StatCard 
+              label="Pending Reviews" 
+              helper="Need commander action" 
+              value={loading ? '…' : summary?.pending_reviews ?? 0} 
+            />
+            <StatCard 
+              label="Total Points" 
+              helper="Accepted activity points" 
+              value={loading ? '…' : summary?.total_score ?? 0} 
+            />
           </section>
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -140,7 +158,7 @@ export default function DashboardPage() {
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <div>
                 <h2 className="text-xl font-semibold text-foreground">Activity Mix</h2>
-                <p className="text-sm text-muted-foreground">Distribution of your submissions</p>
+                <p className="text-sm text-muted-foreground">Distribution by process group</p>
               </div>
 
               {loading ? (
@@ -154,9 +172,9 @@ export default function DashboardPage() {
                   {(summary?.activity_breakdown ?? []).map((bucket) => {
                     const percentage = Math.round((bucket.count / breakdownTotal) * 100);
                     return (
-                      <div key={bucket.activity_type}>
+                      <div key={bucket.process_group}>
                         <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="font-medium text-foreground capitalize">{bucket.activity_type.replace(/_/g, ' ')}</span>
+                          <span className="font-medium text-foreground capitalize">{bucket.process_group.replace(/_/g, ' ')}</span>
                           <span className="text-muted-foreground">{percentage}%</span>
                         </div>
                         <div className="w-full h-2.5 rounded-full bg-muted">

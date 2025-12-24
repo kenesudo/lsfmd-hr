@@ -32,6 +32,7 @@ function markdownToHtml(markdown: string) {
 interface UserProfile {
   full_name: string;
   hr_rank: string;
+  member_type: string;
 }
 
 export default function ApplicationsPage() {
@@ -59,7 +60,7 @@ export default function ApplicationsPage() {
       if (user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name, hr_rank')
+          .select('full_name, hr_rank, member_type')
           .eq('id', user.id)
           .single();
         
@@ -210,10 +211,32 @@ export default function ApplicationsPage() {
                     return;
                   }
 
+                  // Get activity score
+                  const { data: activityTypeData } = await supabase
+                    .from('hr_activities_type')
+                    .select('score')
+                    .eq('key', selectedStatus)
+                    .single();
+
+                  const score = activityTypeData?.score ?? 0;
+
+                  // Get current salary rate for member type
+                  const { data: salaryRateData } = await supabase
+                    .from('member_salary_rates')
+                    .select('salary_per_point')
+                    .eq('member_type_key', profile?.member_type ?? 'part-time')
+                    .order('effective_from', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                  const salaryPerPoint = salaryRateData?.salary_per_point ?? 350;
+                  const salary = score * salaryPerPoint;
+
                   const { error } = await supabase.from('hr_activities').insert({
                     hr_id: user.id,
                     bbc_content: generatedBBC,
                     activity_type: selectedStatus,
+                    salary: salary,
                   });
 
                   if (error) {

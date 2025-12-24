@@ -38,6 +38,7 @@ type ProfileRow = {
   full_name: string;
   username: string;
   hr_rank: string;
+  member_type: 'part-time' | 'full-time' | string;
 };
 
 export async function GET(request: NextRequest) {
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
   if (hrIds.length > 0) {
     const { data: profiles, error: profilesErr } = await admin
       .from('profiles')
-      .select('id, full_name, username, hr_rank')
+      .select('id, full_name, username, hr_rank, member_type')
       .in('id', hrIds);
     if (profilesErr) {
       return NextResponse.json({ ok: false, error: profilesErr.message }, { status: 500 });
@@ -110,6 +111,34 @@ export async function GET(request: NextRequest) {
     profile: profilesById.get(row.hr_id) ?? null,
   }));
 
+  const monthlySummary = Object.entries(scoreboard)
+    .map(([hrId]) => {
+      const profile = profilesById.get(hrId) ?? null;
+      const pointsPerActivity = acceptedRows
+        .filter((row) => row.hr_id === hrId)
+        .map((row) => scoreMap.get(row.activity_type) ?? 0)
+        .filter((points) => points === 1 || points === 2 || points === 3) as Array<1 | 2 | 3>;
+
+      const onePoint = pointsPerActivity.filter((p) => p === 1).length;
+      const twoPoint = pointsPerActivity.filter((p) => p === 2).length;
+      const threePoint = pointsPerActivity.filter((p) => p === 3).length;
+      const totalPoints = onePoint * 1 + twoPoint * 2 + threePoint * 3;
+
+      const memberType = profile?.member_type === 'full-time' ? 'full-time' : 'part-time';
+      const rate = memberType === 'full-time' ? 750 : 350;
+      const totalSalary = totalPoints * rate;
+
+      return {
+        hr_id: hrId,
+        one_point_activities: onePoint,
+        two_point_activities: twoPoint,
+        three_point_activities: threePoint,
+        total_salary: totalSalary,
+        profile,
+      };
+    })
+    .sort((a, b) => b.total_salary - a.total_salary);
+
   return NextResponse.json({
     ok: true,
     month: label,
@@ -117,5 +146,6 @@ export async function GET(request: NextRequest) {
     end: end.toISOString(),
     leaderboard,
     activities,
+    monthly_summary: monthlySummary,
   });
 }

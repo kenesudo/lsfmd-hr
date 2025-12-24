@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const { data: profileData, error: profilesError } = await admin
     .from('profiles')
-    .select('id, username, full_name, lsfmd_rank, hr_rank, must_change_password, created_at, updated_at')
+    .select('id, username, full_name, lsfmd_rank, hr_rank, member_type, must_change_password, created_at, updated_at')
     .order('full_name', { ascending: true });
 
   if (profilesError) {

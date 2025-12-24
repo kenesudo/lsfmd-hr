@@ -15,6 +15,7 @@ type Member = {
   full_name: string;
   lsfmd_rank: string;
   hr_rank: string;
+  member_type: 'part-time' | 'full-time';
   must_change_password: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +34,21 @@ const STATUS_FILTERS = [
   { value: 'all', label: 'All statuses' },
   { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
+] as const;
+
+const LSFMD_RANKS = [
+  'Paramedic',
+  'Senior Paramedic',
+  'Lead Paramedic',
+  'Lieutenant',
+  'Captain',
+  'Assistant Chief',
+  'Chief',
+] as const;
+
+const MEMBER_TYPES = [
+  { value: 'part-time', label: 'Part-time' },
+  { value: 'full-time', label: 'Full-time' },
 ] as const;
 
 export default function ViewMembersPage() {
@@ -115,6 +131,58 @@ export default function ViewMembersPage() {
     }
   };
 
+  const handleLsfmdRankChange = async (memberId: string, nextRank: string) => {
+    if (updatingId) return;
+    setUpdatingId(memberId);
+    try {
+      const res = await fetch(`/api/commander/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lsfmdRank: nextRank }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        toast.error(data.error || 'Failed to update LSFMD rank');
+        return;
+      }
+      setMembers((prev) =>
+        prev.map((member) => (member.id === memberId ? { ...member, lsfmd_rank: nextRank } : member)),
+      );
+      toast.success('LSFMD rank updated');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update LSFMD rank');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleMemberTypeChange = async (memberId: string, nextType: 'part-time' | 'full-time') => {
+    if (updatingId) return;
+    setUpdatingId(memberId);
+    try {
+      const res = await fetch(`/api/commander/members/${memberId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberType: nextType }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        toast.error(data.error || 'Failed to update member type');
+        return;
+      }
+      setMembers((prev) =>
+        prev.map((member) => (member.id === memberId ? { ...member, member_type: nextType } : member)),
+      );
+      toast.success('Member type updated');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update member type');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleDisableToggle = async (member: Member) => {
     if (updatingId) return;
     const nextState = !member.is_disabled;
@@ -154,7 +222,7 @@ export default function ViewMembersPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardNavbar />
           <main className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Commander tools</p>
@@ -165,23 +233,25 @@ export default function ViewMembersPage() {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-                  <div className="space-y-4">
+              <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex-1 min-w-[200px]">
                     <Input
                       label="Search"
                       placeholder="Search name, username, email"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
-
+                  </div>
+                  <div className="w-48">
                     <Select
                       label="HR Role"
                       value={roleFilter}
                       onChange={(e) => setRoleFilter(e.target.value)}
                       options={[{ value: 'all', label: 'All roles' }, ...HR_ROLES.map((role) => ({ value: role, label: role }))]}
                     />
-
+                  </div>
+                  <div className="w-40">
                     <Select
                       label="Status"
                       value={statusFilter}
@@ -189,24 +259,15 @@ export default function ViewMembersPage() {
                       options={STATUS_FILTERS.map((status) => ({ value: status.value, label: status.label }))}
                     />
                   </div>
-
-                  <div className="rounded-md border border-border bg-muted/30 p-4 space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-semibold text-foreground">{members.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Active</span>
-                      <span className="font-semibold text-foreground">{members.filter((m) => !m.is_disabled).length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Disabled</span>
-                      <span className="font-semibold text-foreground">{members.filter((m) => m.is_disabled).length}</span>
+                  <div className="flex items-end gap-4">
+                    <div className="text-sm space-y-1">
+                      <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">{members.length}</span></div>
+                      <div className="text-muted-foreground">Active: <span className="font-semibold text-foreground">{members.filter((m) => !m.is_disabled).length}</span></div>
                     </div>
                   </div>
                 </div>
 
-                <div className="lg:col-span-3 bg-card border border-border rounded-lg p-6">
+                <div className="w-full">
                   {loading ? (
                     <div className="h-64 flex items-center justify-center text-muted-foreground">Loading members…</div>
                   ) : filteredMembers.length === 0 ? (
@@ -215,13 +276,14 @@ export default function ViewMembersPage() {
                       <p className="text-sm">Adjust your filters or refresh the list.</p>
                     </div>
                   ) : (
-                    <div className="overflow-auto">
+                    <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-left text-muted-foreground border-b border-border">
                             <th className="py-3 pr-4 font-medium">Member</th>
                             <th className="py-3 pr-4 font-medium">LSFMD Rank</th>
                             <th className="py-3 pr-4 font-medium">HR Role</th>
+                            <th className="py-3 pr-4 font-medium">Member Type</th>
                             <th className="py-3 pr-4 font-medium">Status</th>
                             <th className="py-3 font-medium text-right">Actions</th>
                           </tr>
@@ -238,20 +300,43 @@ export default function ViewMembersPage() {
                                 </div>
                               </td>
                               <td className="py-4 pr-4">
-                                <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
-                                  {member.lsfmd_rank}
-                                </span>
+                                <select
+                                  value={member.lsfmd_rank}
+                                  disabled={Boolean(updatingId)}
+                                  onChange={(e) => handleLsfmdRankChange(member.id, e.target.value)}
+                                  className="flex h-9 w-full min-w-[140px] rounded-md border border-border bg-input px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                >
+                                  {LSFMD_RANKS.map((rank) => (
+                                    <option key={rank} value={rank}>
+                                      {rank}
+                                    </option>
+                                  ))}
+                                </select>
                               </td>
                               <td className="py-4 pr-4">
                                 <select
                                   value={member.hr_rank}
                                   disabled={Boolean(updatingId)}
                                   onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                                  className="flex h-9 w-full rounded-md border border-border bg-input px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                  className="flex h-9 w-full min-w-[160px] rounded-md border border-border bg-input px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                 >
                                   {HR_ROLES.map((role) => (
                                     <option key={role} value={role}>
                                       {role}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="py-4 pr-4">
+                                <select
+                                  value={member.member_type}
+                                  disabled={Boolean(updatingId)}
+                                  onChange={(e) => handleMemberTypeChange(member.id, e.target.value as 'part-time' | 'full-time')}
+                                  className="flex h-9 w-full min-w-[110px] rounded-md border border-border bg-input px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                >
+                                  {MEMBER_TYPES.map((type) => (
+                                    <option key={type.value} value={type.value}>
+                                      {type.label}
                                     </option>
                                   ))}
                                 </select>

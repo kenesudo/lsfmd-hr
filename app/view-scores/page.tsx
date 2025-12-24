@@ -53,13 +53,14 @@ export default function ViewScoresPage() {
 
   const leaderboard = useMemo(() => data?.leaderboard ?? [], [data]);
   const activities = useMemo(() => data?.activities ?? [], [data]);
+  const monthlySummary = useMemo(() => data?.monthly_summary ?? [], [data]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
-        <main className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+        <main className="flex-1 overflow-y-auto p-6">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Commander Tools</p>
@@ -95,9 +96,9 @@ export default function ViewScoresPage() {
             </div>
           )}
 
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-1 bg-card border border-border rounded-lg p-6 space-y-6">
-              <div>
+          <div className="space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="mb-6">
                 <h2 className="text-xl font-semibold text-foreground">Leaderboard</h2>
                 <p className="text-sm text-muted-foreground">Top performers for the selected month.</p>
               </div>
@@ -107,65 +108,99 @@ export default function ViewScoresPage() {
               ) : leaderboard.length === 0 ? (
                 <div className="text-muted-foreground text-sm">No accepted activities within this month.</div>
               ) : (
-                <div className="space-y-4">
-                  {leaderboard.map((entry, index) => (
-                    <div key={entry.hr_id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {index + 1}. {entry.profile?.full_name || entry.hr_id}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          @{entry.profile?.username || 'unknown'} • {entry.activity_count} activities
-                        </p>
-                      </div>
-                      <span className="text-lg font-bold text-primary">{entry.score}</span>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b border-border">
+                        <th className="py-3 pr-4 font-medium">Rank</th>
+                        <th className="py-3 pr-4 font-medium">Member</th>
+                        <th className="py-3 pr-4 font-medium">Activities</th>
+                        <th className="py-3 font-medium text-right">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {leaderboard.map((entry, index) => (
+                        <tr key={entry.hr_id}>
+                          <td className="py-4 pr-4">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold">
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <div className="font-semibold text-foreground">
+                              {entry.profile?.full_name || entry.hr_id}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              @{entry.profile?.username || 'unknown'}
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <span className="text-muted-foreground">{entry.activity_count}</span>
+                          </td>
+                          <td className="py-4 text-right">
+                            <span className="text-lg font-bold text-primary">{entry.score}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
 
-            <div className="xl:col-span-2 bg-card border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground">Monthly Activity</h2>
-                  <p className="text-sm text-muted-foreground">Accepted activities during this period.</p>
-                </div>
+            <div className="bg-card border border-border rounded-lg p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-foreground">Monthly Activity</h2>
+                <p className="text-sm text-muted-foreground">Accepted activity breakdown per member.</p>
               </div>
 
               {loading ? (
                 <div className="h-64 flex items-center justify-center text-muted-foreground">Loading…</div>
-              ) : activities.length === 0 ? (
+              ) : monthlySummary.length === 0 ? (
                 <div className="h-64 flex items-center justify-center text-muted-foreground">No activity yet.</div>
               ) : (
-                <div className="space-y-3">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-lg p-4">
-                      <div>
-                        <p className="font-semibold text-foreground capitalize">
-                          {activity.activity_type.replace(/_/g, ' ')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(activity.created_at).toLocaleString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <p className="text-sm text-muted-foreground">
-                          {activity.profile?.full_name || 'Unknown'} • @{activity.profile?.username || 'unknown'}
-                        </p>
-                        <p className="text-sm font-semibold text-foreground">+{activity.score} pts</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-muted-foreground border-b border-border">
+                        <th className="py-2 pr-4 font-medium">Name</th>
+                        <th className="py-2 pr-2 font-medium text-center">1 pt</th>
+                        <th className="py-2 pr-2 font-medium text-center">2 pt</th>
+                        <th className="py-2 pr-2 font-medium text-center">3 pt</th>
+                        <th className="py-2 font-medium text-right">Total Salary</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {monthlySummary.map((row) => (
+                        <tr key={row.hr_id}>
+                          <td className="py-3 pr-4">
+                            <div className="font-semibold text-foreground">
+                              {row.profile?.full_name || row.hr_id}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {row.profile?.hr_rank || ''}
+                            </div>
+                          </td>
+                          <td className="py-3 pr-2 text-center tabular-nums text-foreground">
+                            {row.one_point_activities}
+                          </td>
+                          <td className="py-3 pr-2 text-center tabular-nums text-foreground">
+                            {row.two_point_activities}
+                          </td>
+                          <td className="py-3 pr-2 text-center tabular-nums text-foreground">
+                            {row.three_point_activities}
+                          </td>
+                          <td className="py-3 text-right tabular-nums font-semibold text-foreground">
+                            ${row.total_salary.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
-          </section>
+          </div>
         </main>
       </div>
     </div>
@@ -195,6 +230,18 @@ type ScoreResponse = {
     created_at: string;
     status: string;
     score: number;
+    profile: {
+      full_name: string;
+      username: string;
+      hr_rank: string;
+    } | null;
+  }[];
+  monthly_summary: {
+    hr_id: string;
+    one_point_activities: number;
+    two_point_activities: number;
+    three_point_activities: number;
+    total_salary: number;
     profile: {
       full_name: string;
       username: string;

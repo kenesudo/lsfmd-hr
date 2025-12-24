@@ -10,6 +10,11 @@ type Body = {
   fullName: string;
   lsfmdRank: string;
   hrRank: HrRole;
+  memberType?: 'part-time' | 'full-time';
+};
+
+const isMemberType = (value: string): value is 'part-time' | 'full-time' => {
+  return (['part-time', 'full-time'] as const).includes(value as 'part-time' | 'full-time');
 };
 
 const isHrRole = (value: string): value is HrRole => {
@@ -70,6 +75,8 @@ export async function POST(request: NextRequest) {
   const fullName = (body.fullName || '').trim();
   const lsfmdRank = (body.lsfmdRank || '').trim();
   const hrRank = (body.hrRank || '').trim();
+  const memberTypeRaw = typeof body.memberType === 'string' ? body.memberType : 'part-time';
+  const memberType = isMemberType(memberTypeRaw) ? memberTypeRaw : null;
 
   if (!username || !isValidUsername(username)) {
     return NextResponse.json(
@@ -88,6 +95,10 @@ export async function POST(request: NextRequest) {
 
   if (!isHrRole(hrRank)) {
     return NextResponse.json({ ok: false, error: 'Invalid HR role.' }, { status: 400 });
+  }
+
+  if (!memberType) {
+    return NextResponse.json({ ok: false, error: 'Invalid member type.' }, { status: 400 });
   }
 
   const tempPassword = generateTempPassword(10);
@@ -116,6 +127,7 @@ export async function POST(request: NextRequest) {
     full_name: fullName,
     lsfmd_rank: lsfmdRank,
     hr_rank: hrRank,
+    member_type: memberType,
     must_change_password: true,
   });
 

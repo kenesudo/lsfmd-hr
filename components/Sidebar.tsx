@@ -16,6 +16,15 @@ interface UserProfile {
 let cachedProfile: UserProfile | null | undefined;
 const PROFILE_CACHE_KEY = 'hr_templates_profile_v1';
 
+export function clearProfileCache() {
+  cachedProfile = undefined;
+  try {
+    sessionStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 type NavItem = {
   name: string;
   href: string;

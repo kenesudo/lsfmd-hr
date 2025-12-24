@@ -4,7 +4,6 @@ import BbcodePreview from '@/components/BbcodePreview';
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
 import Input from '@/components/Input';
-import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import { renderBbcode } from '@/lib/bbcode';
 import { useEffect, useMemo, useState } from 'react';
@@ -23,6 +22,7 @@ type Activity = {
   bbc_content: string;
   activity_type: string;
   status: 'pending' | 'accepted' | 'denied';
+  salary: number | null;
   created_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -49,12 +49,7 @@ type PatchResponse = {
   error?: string;
 };
 
-const STATUS_FILTERS = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'denied', label: 'Denied' },
-] as const;
+type TabStatus = 'pending' | 'accepted' | 'denied';
 
 export default function ViewActivitiesPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -64,7 +59,7 @@ export default function ViewActivitiesPage() {
   const [previewActivity, setPreviewActivity] = useState<Activity | null>(null);
 
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]['value']>('pending');
+  const [activeTab, setActiveTab] = useState<TabStatus>('pending');
 
   useEffect(() => {
     fetchActivities();
@@ -75,7 +70,7 @@ export default function ViewActivitiesPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.set('status', statusFilter);
+      params.set('status', 'all');
       if (search.trim()) params.set('q', search.trim());
 
       const res = await fetch(`/api/commander/activities?${params.toString()}`);
@@ -101,16 +96,15 @@ export default function ViewActivitiesPage() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const status = statusFilter;
 
     return activities.filter((a) => {
-      const matchesStatus = status === 'all' ? true : a.status === status;
+      const matchesStatus = a.status === activeTab;
       const matchesTerm = term
         ? [a.hr?.full_name, a.hr?.username, a.activity_type].some((v) => v?.toLowerCase().includes(term))
         : true;
       return matchesStatus && matchesTerm;
     });
-  }, [activities, search, statusFilter]);
+  }, [activities, search, activeTab]);
 
   const updateActivityStatus = async (activityId: string, status: 'accepted' | 'denied') => {
     if (updatingId) return;
@@ -165,7 +159,7 @@ export default function ViewActivitiesPage() {
           <div className="flex-1 flex flex-col overflow-hidden">
             <DashboardNavbar />
             <main className="flex-1 overflow-y-auto p-6">
-              <div className="max-w-7xl mx-auto space-y-6">
+              <div className="w-full space-y-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Commander tools</p>
@@ -176,46 +170,60 @@ export default function ViewActivitiesPage() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-                    <div className="space-y-4">
+                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex-1 min-w-[250px]">
                       <Input
                         label="Search"
                         placeholder="Search HR name, username, activity type"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />
-
-                      <Select
-                        label="Status"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as (typeof STATUS_FILTERS)[number]['value'])}
-                        options={STATUS_FILTERS.map((s) => ({ value: s.value, label: s.label }))}
-                      />
-
-                      <Button
-                        variant="primary"
-                        onClick={() => fetchActivities()}
-                        disabled={loading || Boolean(updatingId)}
-                        className="w-full"
-                      >
-                        Apply filters
-                      </Button>
                     </div>
-
-                    <div className="rounded-md border border-border bg-muted/30 p-4 space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total</span>
-                        <span className="font-semibold text-foreground">{activities.length}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Pending</span>
-                        <span className="font-semibold text-foreground">{activities.filter((a) => a.status === 'pending').length}</span>
+                    <div className="flex items-end gap-2">
+                      <div className="text-sm space-y-1">
+                        <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">{activities.length}</span></div>
+                        <div className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">{activities.filter((a) => a.status === 'pending').length}</span></div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="lg:col-span-3 bg-card border border-border rounded-lg p-6">
+                  <div className="border-b border-border">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === 'pending'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Pending ({activities.filter((a) => a.status === 'pending').length})
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('accepted')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === 'accepted'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Accepted ({activities.filter((a) => a.status === 'accepted').length})
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('denied')}
+                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === 'denied'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Denied ({activities.filter((a) => a.status === 'denied').length})
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="w-full">
                     {loading ? (
                       <div className="h-64 flex items-center justify-center text-muted-foreground">Loading activities…</div>
                     ) : filtered.length === 0 ? (
@@ -224,95 +232,99 @@ export default function ViewActivitiesPage() {
                         <p className="text-sm">Adjust your filters or refresh the list.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {filtered.map((activity) => (
-                          <div key={activity.id} className="border border-border rounded-lg p-4">
-                            <div className="flex items-start justify-between gap-4 flex-wrap">
-                              <div className="min-w-0">
-                                <div className="text-sm text-muted-foreground">HR</div>
-                                <div className="font-semibold text-foreground">
-                                  {activity.hr?.full_name || activity.hr_id}
-                                </div>
-                                {activity.hr?.username && (
-                                  <div className="text-xs text-muted-foreground">@{activity.hr.username}</div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b border-border">
+                              <th className="py-3 pr-4 font-medium">HR Member</th>
+                              <th className="py-3 pr-4 font-medium">Activity Type</th>
+                              <th className="py-3 pr-4 font-medium">Salary</th>
+                              <th className="py-3 pr-4 font-medium">Created</th>
+                              {activeTab !== 'pending' && <th className="py-3 pr-4 font-medium">Reviewed</th>}
+                              <th className="py-3 font-medium text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {filtered.map((activity) => (
+                              <tr key={activity.id} className="align-top">
+                                <td className="py-4 pr-4">
+                                  <div className="font-semibold text-foreground">
+                                    {activity.hr?.full_name || activity.hr_id}
+                                  </div>
+                                  {activity.hr?.username && (
+                                    <div className="text-xs text-muted-foreground">@{activity.hr.username}</div>
+                                  )}
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground capitalize">
+                                    {activity.activity_type.replace(/_/g, ' ')}
+                                  </span>
+                                </td>
+                                <td className="py-4 pr-4">
+                                  {activity.salary ? (
+                                    <span className="text-foreground font-medium">${activity.salary.toFixed(2)}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(activity.created_at).toLocaleString()}
+                                  </div>
+                                </td>
+                                {activeTab !== 'pending' && (
+                                  <td className="py-4 pr-4">
+                                    <div className="text-xs text-muted-foreground">
+                                      {activity.reviewed_at ? new Date(activity.reviewed_at).toLocaleString() : '—'}
+                                    </div>
+                                    {activity.reviewer && (
+                                      <div className="text-xs text-muted-foreground">
+                                        by {activity.reviewer.full_name}
+                                      </div>
+                                    )}
+                                    {activity.deny_reason && (
+                                      <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                        Reason: {activity.deny_reason}
+                                      </div>
+                                    )}
+                                  </td>
                                 )}
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  Type: <span className="text-foreground">{activity.activity_type}</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Created: {new Date(activity.created_at).toLocaleString()}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full border ${
-                                    activity.status === 'pending'
-                                      ? 'border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
-                                      : activity.status === 'accepted'
-                                        ? 'border-green-500/40 text-green-600 dark:text-green-400'
-                                        : 'border-red-500/40 text-red-600 dark:text-red-400'
-                                  }`}
-                                >
-                                  {activity.status}
-                                </span>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewActivity(activity)}
-                                  className="inline-flex items-center justify-center rounded-md border border-border bg-card px-2 py-1 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                  aria-label="View details"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={1.8}
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M1.5 12s3.75-7.5 10.5-7.5S22.5 12 22.5 12s-3.75 7.5-10.5 7.5S1.5 12 1.5 12Z"
-                                    />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 100-6 3 3 0 000 6Z" />
-                                  </svg>
-                                </button>
-
-                                <Button
-                                  variant="outline"
-                                  disabled={Boolean(updatingId) || activity.status !== 'pending'}
-                                  onClick={() => updateActivityStatus(activity.id, 'accepted')}
-                                >
-                                  Accept
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  disabled={Boolean(updatingId) || activity.status !== 'pending'}
-                                  onClick={() => updateActivityStatus(activity.id, 'denied')}
-                                >
-                                  Deny
-                                </Button>
-                              </div>
-                            </div>
-
-                            {activity.deny_reason && (
-                              <div className="mt-3 text-sm text-muted-foreground">
-                                Deny reason: <span className="text-foreground">{activity.deny_reason}</span>
-                              </div>
-                            )}
-
-                            <div className="mt-3">
-                              <label className="block text-xs font-medium text-muted-foreground mb-2">BBC Content</label>
-                              <textarea
-                                readOnly
-                                value={activity.bbc_content}
-                                className="w-full h-40 rounded-md border border-border bg-input px-3 py-2 text-xs text-foreground"
-                              />
-                            </div>
-                          </div>
-                        ))}
+                                <td className="py-4 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewActivity(activity)}
+                                      className="inline-flex items-center justify-center rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                      aria-label="View details"
+                                    >
+                                      Details
+                                    </button>
+                                    {activity.status === 'pending' && (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={Boolean(updatingId)}
+                                          onClick={() => updateActivityStatus(activity.id, 'accepted')}
+                                        >
+                                          Accept
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={Boolean(updatingId)}
+                                          onClick={() => updateActivityStatus(activity.id, 'denied')}
+                                        >
+                                          Deny
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>

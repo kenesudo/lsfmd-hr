@@ -9,6 +9,7 @@ type ActivityRow = {
   bbc_content: string;
   activity_type: string;
   status: 'pending' | 'accepted' | 'denied';
+  salary: number | null;
   created_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
 
   let query = admin
     .from('hr_activities')
-    .select('id, hr_id, bbc_content, activity_type, status, created_at, reviewed_at, reviewed_by, deny_reason')
+    .select('id, hr_id, bbc_content, activity_type, status, salary, created_at, reviewed_at, reviewed_by, deny_reason')
     .order('created_at', { ascending: false })
     .limit(500);
 

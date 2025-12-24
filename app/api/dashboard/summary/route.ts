@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     .select('activity_type')
     .eq('hr_id', user.id)
     .eq('status', 'accepted');
-  const typeScoresPromise = supabase.from('hr_activities_type').select('key, score');
+  const typeScoresPromise = supabase.from('hr_activities_type').select('key, score, process_group');
   const breakdownPromise = supabase
     .from('hr_activities')
     .select('activity_type')
@@ -103,11 +103,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  type ScoreRow = { key: string; score: number };
+  type ScoreRow = { key: string; score: number; process_group: string };
   type ActivityTypeRow = { activity_type: string };
 
   const scoreMap = new Map<string, number>(
     (typeScoresResult.data ?? []).map((row: ScoreRow) => [row.key, Number(row.score) || 0]),
+  );
+
+  const processGroupMap = new Map<string, string>(
+    (typeScoresResult.data ?? []).map((row: ScoreRow) => [row.key, row.process_group]),
   );
 
   const totalScore = (acceptedResult.data ?? []).reduce((sum: number, row: ActivityTypeRow) => {
@@ -115,16 +119,25 @@ export async function GET(request: NextRequest) {
     return sum + score;
   }, 0);
 
-  const breakdownCounts = (breakdownResult.data ?? []).reduce<Record<string, number>>((acc, row: ActivityTypeRow) => {
-    const key = row.activity_type;
-    acc[key] = (acc[key] ?? 0) + 1;
+  const processGroupCounts = (breakdownResult.data ?? []).reduce<Record<string, number>>((acc, row: ActivityTypeRow) => {
+    const processGroup = processGroupMap.get(row.activity_type) ?? 'other';
+    acc[processGroup] = (acc[processGroup] ?? 0) + 1;
     return acc;
   }, {});
 
-  const breakdown = Object.entries(breakdownCounts).map(([activityType, count]) => ({
-    activity_type: activityType,
+  const breakdown = Object.entries(processGroupCounts).map(([processGroup, count]) => ({
+    process_group: processGroup,
     count,
   }));
+
+  // Calculate total salary from accepted activities
+  const { data: activitiesWithSalary } = await supabase
+    .from('hr_activities')
+    .select('salary')
+    .eq('hr_id', user.id)
+    .eq('status', 'accepted');
+
+  const totalSalary = (activitiesWithSalary ?? []).reduce((sum, act) => sum + (Number(act.salary) || 0), 0);
 
   return NextResponse.json({
     ok: true,
@@ -133,6 +146,7 @@ export async function GET(request: NextRequest) {
     completed_reviews: completedResult.count ?? 0,
     total_activities: totalActivitiesResult.count ?? 0,
     total_score: totalScore,
+    total_salary: totalSalary,
     activity_breakdown: breakdown,
     recent_activities: recentResult.data ?? [],
   });

@@ -68,6 +68,12 @@ function LoginForm({ next }: { next: string }) {
         return;
       }
 
+      try {
+        sessionStorage.clear();
+      } catch {
+        // ignore
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();

@@ -19,6 +19,11 @@ const LSFMD_RANKS = [
   'Chief',
 ] as const;
 
+const MEMBER_TYPES = [
+  { value: 'part-time', label: 'Part-time' },
+  { value: 'full-time', label: 'Full-time' },
+] as const;
+
 type Result = {
   username: string;
   tempPassword: string;
@@ -30,6 +35,7 @@ export default function CommanderCreateAccountPage() {
   const [fullName, setFullName] = useState('');
   const [lsfmdRank, setLsfmdRank] = useState('');
   const [hrRank, setHrRank] = useState('General Instructor');
+  const [memberType, setMemberType] = useState<'part-time' | 'full-time'>('part-time');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +72,7 @@ export default function CommanderCreateAccountPage() {
           fullName,
           lsfmdRank,
           hrRank,
+          memberType,
         }),
       });
 
@@ -85,6 +92,7 @@ export default function CommanderCreateAccountPage() {
       setFullName('');
       setLsfmdRank('');
       setHrRank('General Instructor');
+      setMemberType('part-time');
     } finally {
       setLoading(false);
     }
@@ -141,6 +149,13 @@ export default function CommanderCreateAccountPage() {
                   value={hrRank}
                   onChange={(e) => setHrRank(e.target.value)}
                   options={HR_ROLES.map((r) => ({ value: r, label: r }))}
+                />
+
+                <Select
+                  label="Member Type"
+                  value={memberType}
+                  onChange={(e) => setMemberType(e.target.value as 'part-time' | 'full-time')}
+                  options={MEMBER_TYPES.map((t) => ({ value: t.value, label: t.label }))}
                 />
 
                 {error && (

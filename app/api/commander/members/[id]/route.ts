@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 type Body = {
   hrRank?: HrRole;
+  lsfmdRank?: string;
+  memberType?: 'part-time' | 'full-time';
   disable?: boolean;
 };
 
@@ -39,30 +41,52 @@ export async function PATCH(
   }
 
   const updates: string[] = [];
+  const profileUpdates: Record<string, string> = {};
 
   if (typeof body.hrRank === 'string') {
     if (!(HR_ROLES as readonly string[]).includes(body.hrRank)) {
       return NextResponse.json({ ok: false, error: 'Invalid HR role selection.' }, { status: 400 });
     }
+    profileUpdates.hr_rank = body.hrRank;
+    updates.push('hr_rank');
+  }
 
+  if (typeof body.lsfmdRank === 'string') {
+    const validLsfmdRanks = ['Paramedic', 'Senior Paramedic', 'Lead Paramedic', 'Lieutenant', 'Captain', 'Assistant Chief', 'Chief'];
+    if (!validLsfmdRanks.includes(body.lsfmdRank)) {
+      return NextResponse.json({ ok: false, error: 'Invalid LSFMD rank selection.' }, { status: 400 });
+    }
+    profileUpdates.lsfmd_rank = body.lsfmdRank;
+    updates.push('lsfmd_rank');
+  }
+
+  if (typeof body.memberType === 'string') {
+    if (!['part-time', 'full-time'].includes(body.memberType)) {
+      return NextResponse.json({ ok: false, error: 'Invalid member type selection.' }, { status: 400 });
+    }
+    profileUpdates.member_type = body.memberType;
+    updates.push('member_type');
+  }
+
+  if (Object.keys(profileUpdates).length > 0) {
     const { error: profileError } = await admin
       .from('profiles')
-      .update({ hr_rank: body.hrRank })
+      .update(profileUpdates)
       .eq('id', userId);
 
     if (profileError) {
       return NextResponse.json({ ok: false, error: profileError.message }, { status: 500 });
     }
 
-    const { error: authError } = await admin.auth.admin.updateUserById(userId, {
-      user_metadata: { hr_rank: body.hrRank },
-    });
+    if (profileUpdates.hr_rank) {
+      const { error: authError } = await admin.auth.admin.updateUserById(userId, {
+        user_metadata: { hr_rank: profileUpdates.hr_rank },
+      });
 
-    if (authError) {
-      return NextResponse.json({ ok: false, error: authError.message }, { status: 500 });
+      if (authError) {
+        return NextResponse.json({ ok: false, error: authError.message }, { status: 500 });
+      }
     }
-
-    updates.push('hr_rank');
   }
 
   if (typeof body.disable === 'boolean') {
