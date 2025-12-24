@@ -1,6 +1,5 @@
 'use client';
 
-import Alert from '@/components/Alert';
 import Button from '@/components/Button';
 import Checkbox from '@/components/Checkbox';
 import DashboardNavbar from '@/components/DashboardNavbar';
@@ -33,7 +32,7 @@ type UserProfile = {
   hr_rank: string;
 };
 
-export default function EmployeeProfilePage() {
+export default function RosterUpdatePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [autoFillHr, setAutoFillHr] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,26 +48,23 @@ export default function EmployeeProfilePage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const supabase = createSupabaseBrowserClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          toast.error('You must be signed in to view this page.');
-          return;
-        }
+      const supabase = createSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be signed in');
+        return;
+      }
 
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, full_name, hr_rank')
-          .eq('id', user.id)
-          .maybeSingle();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, full_name, hr_rank')
+        .eq('id', user.id)
+        .single();
 
-        if (profileError) throw profileError;
-        if (profileData) setProfile(profileData as UserProfile);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load employee profile data.');
+      if (profileData) {
+        setProfile(profileData);
       }
     };
 
@@ -82,12 +78,11 @@ export default function EmployeeProfilePage() {
         const { data, error } = await supabase
           .from('hr_activities_type')
           .select('key, label')
-          .eq('process_group', 'employee_profile')
-          .order('label', { ascending: true })
-          .order('key', { ascending: true });
+          .eq('process_group', 'roster_update')
+          .order('label');
 
         if (error) {
-          toast.error(error.message || 'Failed to load process options');
+          toast.error(error.message);
           setProcessTypeOptions([]);
           setProcessType('');
           return;
@@ -112,6 +107,7 @@ export default function EmployeeProfilePage() {
 
     loadProcessOptions();
   }, []);
+
   const providedValues: Record<string, string> | undefined = autoFillHr
     ? {
         hr_rank: profile?.hr_rank ?? '',
@@ -179,22 +175,10 @@ export default function EmployeeProfilePage() {
             <div className="max-w-7xl mx-auto space-y-6">
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground">Employee Profiles</h1>
-                  <p className="text-muted-foreground">Fields are defined in the BBC Templates editor.</p>
+                  <h1 className="text-3xl font-bold text-foreground">Roster Update</h1>
+                  <p className="text-muted-foreground">Track roster updates as activities.</p>
                 </div>
               </div>
-
-              <Alert variant="warning">
-                <strong>Reminder:</strong> After updating an employee profile, you must also update the roster.{' '}
-                <a
-                  href="https://forums.hzgaming.net/showthread.php/630708-HR-Roster-edit-as-you-update-profiles"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="underline font-semibold hover:opacity-80"
-                >
-                  Click here to update the roster
-                </a>
-              </Alert>
 
               <div>
                 <Checkbox
@@ -205,7 +189,7 @@ export default function EmployeeProfilePage() {
               </div>
 
               <DynamicBbcTemplateRunner
-                title="Employee Profile"
+                title="Roster Update"
                 description="Fill the inputs below. If a {{variable}} exists in the template, it must have a field definition in the editor."
                 initialProcessType={processType}
                 processTypeLabel="Process"
@@ -232,37 +216,37 @@ export default function EmployeeProfilePage() {
                     });
 
                     if (error) {
-                      toast.error(error.message || 'Failed to save activity');
+                      toast.error(error.message);
                       return;
                     }
 
-                    toast.success('Saved');
+                    toast.success('Roster update activity saved successfully');
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Failed to save activity');
                   } finally {
                     setSaving(false);
                   }
                 }}
               />
 
-              <div className="mt-6 bg-card border border-border rounded-lg p-6">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Log Markdown</h2>
-
-                <Button onClick={handleCopyLog} variant="outline" className="w-full" disabled={logLoading || !logMarkdown}>
-                  {logCopied ? '✓ Copied!' : 'Copy Log Markdown'}
-                </Button>
-
-                <div className="mt-3 p-3 bg-secondary rounded-md">
+              {logMarkdown && (
+                <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-foreground">Log Markdown</h2>
+                    <Button variant="outline" size="sm" onClick={handleCopyLog} disabled={logLoading}>
+                      {logCopied ? 'Copied!' : 'Copy Log'}
+                    </Button>
+                  </div>
                   {logLoading ? (
-                    <p className="text-sm text-muted-foreground">Loading log markdown…</p>
-                  ) : logMarkdown ? (
+                    <div className="text-sm text-muted-foreground">Loading log markdown…</div>
+                  ) : (
                     <div
-                      className="text-sm text-foreground whitespace-pre-wrap"
+                      className="prose prose-sm max-w-none text-foreground"
                       dangerouslySetInnerHTML={{ __html: markdownToHtml(logMarkdown) }}
                     />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No markdown found for this tab.</p>
                   )}
                 </div>
-              </div>
+              )}
             </div>
           </main>
         </div>

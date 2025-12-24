@@ -28,6 +28,12 @@ export default function Navbar() {
                 Dashboard
               </Link>
               <Link
+                href="/credits"
+                className="rounded-md px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors"
+              >
+                Credits
+              </Link>
+              <Link
                 href="/login"
                 className="rounded-md px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary hover:text-primary transition-colors"
               >
@@ -87,6 +93,12 @@ export default function Navbar() {
               className="block rounded-md px-3 py-2 text-base font-medium text-foreground hover:bg-secondary hover:text-primary"
             >
               Dashboard
+            </Link>
+            <Link
+              href="/credits"
+              className="block rounded-md px-3 py-2 text-base font-medium text-foreground hover:bg-secondary hover:text-primary"
+            >
+              Credits
             </Link>
             <Link
               href="/login"
