@@ -9,6 +9,7 @@ const teamMembers = [
   { name: 'Jyso Blue', role: 'Tester' },
   { name: 'Max C Yamaguchi', role: 'Tester' },
   { name: 'Micky Corleone', role: 'Tester' },
+  { name: 'Lonnie Hoover', role: 'Tester' },
   { name: 'Aritro Vercetti', role: 'Tester' },
 ];
 
