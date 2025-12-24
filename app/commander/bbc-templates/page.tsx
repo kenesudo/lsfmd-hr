@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile';
+type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile' | 'roster_update';
 
 type FieldType = 'text' | 'textarea' | 'select';
 type FieldTransform = 'raw' | 'bbc_list';
@@ -86,6 +86,7 @@ const GROUP_OPTIONS: { value: ProcessGroup; label: string }[] = [
   { value: 'supervision', label: 'Supervision' },
   { value: 'trainings', label: 'Trainings' },
   { value: 'employee_profile', label: 'Employee Profile' },
+  { value: 'roster_update', label: 'Roster Update' },
 ];
 
 export default function CommanderBBCTemplatesPage() {

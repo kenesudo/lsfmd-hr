@@ -9,7 +9,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile';
+type ProcessGroup = 'application' | 'reinstatement' | 'supervision' | 'trainings' | 'employee_profile' | 'roster_update';
 
 type ProcessRow = {
   key: string;
@@ -25,6 +25,7 @@ const GROUP_OPTIONS: { value: ProcessGroup; label: string }[] = [
   { value: 'supervision', label: 'Supervision' },
   { value: 'trainings', label: 'Trainings' },
   { value: 'employee_profile', label: 'Employee Profile' },
+  { value: 'roster_update', label: 'Roster Update' },
 ];
 
 const SCORE_OPTIONS = [

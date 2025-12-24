@@ -327,7 +327,7 @@ export default function Sidebar() {
           onClick={() => toggleSection('utilities')}
           className="w-full flex items-center justify-between px-3 py-1.5 mt-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
         >
-          <span>Utilities</span>
+          <span>Utilities / Settings</span>
           <svg className={`h-4 w-4 transition-transform ${collapsedSections['utilities'] ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
