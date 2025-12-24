@@ -240,14 +240,18 @@ function stripQuotes(value?: string) {
 
 function renderNode(node: BbcodeNode, context: RenderContext = {}): string {
   if (node.type === 'text') {
-    const trimmed = node.content;
-    if (!trimmed.replace(/\s/g, '')) {
-      return '';
+    const raw = node.content;
+    const needsBreaks = context.parentTag ? !TABLE_TAGS.has(context.parentTag) : true;
+
+    const onlyWhitespace = !raw.replace(/\s/g, '');
+    if (onlyWhitespace) {
+      if (!needsBreaks) return '';
+      const breaks = raw.match(/\r\n|\r|\n/g);
+      if (!breaks) return '';
+      return '<br />'.repeat(breaks.length);
     }
-    const needsBreaks = context.parentTag
-      ? !TABLE_TAGS.has(context.parentTag)
-      : true;
-    const safe = escapeHtml(trimmed);
+
+    const safe = escapeHtml(raw);
     return needsBreaks ? safe.replace(/\r\n|\r|\n/g, '<br />') : safe;
   }
 
@@ -272,7 +276,7 @@ function renderNode(node: BbcodeNode, context: RenderContext = {}): string {
 type RenderChildren = (overrides?: Partial<RenderContext>) => string;
 type Renderer = (node: TagNode, renderChildren: RenderChildren, context: RenderContext) => string;
 
-const TABLE_TAGS = new Set(['table', 'tr', 'td', 'th']);
+const TABLE_TAGS = new Set(['table', 'tr']);
 
 const TAG_RENDERERS: Record<string, Renderer> = {
   b: (_node, renderChildren) => `<strong>${renderChildren()}</strong>`,
