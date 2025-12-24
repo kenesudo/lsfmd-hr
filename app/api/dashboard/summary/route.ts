@@ -10,6 +10,23 @@ type CountResult = {
 
 export async function GET(request: NextRequest) {
   const response = NextResponse.next();
+  
+  // Get month parameter (format: YYYY-MM)
+  const { searchParams } = new URL(request.url);
+  const monthParam = searchParams.get('month');
+  
+  let targetYear: number;
+  let targetMonth: number;
+  
+  if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    const [year, month] = monthParam.split('-').map(Number);
+    targetYear = year;
+    targetMonth = month;
+  } else {
+    const now = new Date();
+    targetYear = now.getFullYear();
+    targetMonth = now.getMonth() + 1;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,16 +59,22 @@ export async function GET(request: NextRequest) {
     .from('hr_activities')
     .select('*', { count: 'exact', head: true })
     .eq('hr_id', user.id)
-    .eq('status', 'pending');
+    .eq('status', 'pending')
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
   const completedPromise = supabase
     .from('hr_activities')
     .select('*', { count: 'exact', head: true })
     .eq('hr_id', user.id)
-    .in('status', ['accepted', 'denied']);
+    .in('status', ['accepted', 'denied'])
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
   const totalActivitiesPromise = supabase
     .from('hr_activities')
     .select('*', { count: 'exact', head: true })
-    .eq('hr_id', user.id);
+    .eq('hr_id', user.id)
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
   const recentPromise = supabase
     .from('hr_activities')
     .select('id, activity_type, status, created_at, hr_activities_type(label, process_group)')
@@ -62,15 +85,23 @@ export async function GET(request: NextRequest) {
     .from('hr_activities')
     .select('activity_type')
     .eq('hr_id', user.id)
-    .eq('status', 'accepted');
+    .eq('status', 'accepted')
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
   const typeScoresPromise = supabase.from('hr_activities_type').select('key, score, process_group');
   const breakdownPromise = supabase
     .from('hr_activities')
     .select('activity_type')
-    .eq('hr_id', user.id);
+    .eq('hr_id', user.id)
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
   
-  // Fetch leaderboard data (top 10 members by total salary)
-  const leaderboardPromise = supabase.rpc('get_leaderboard', { limit_count: 10 });
+  // Fetch monthly leaderboard data (top 3 members by total salary for the month)
+  const leaderboardPromise = supabase.rpc('get_monthly_leaderboard', { 
+    target_year: targetYear, 
+    target_month: targetMonth,
+    limit_count: 3 
+  });
 
   const [
     templatesResult,
@@ -136,12 +167,14 @@ export async function GET(request: NextRequest) {
     count,
   }));
 
-  // Calculate total salary from accepted activities
+  // Calculate total salary from accepted activities for the month
   const { data: activitiesWithSalary } = await supabase
     .from('hr_activities')
     .select('salary')
     .eq('hr_id', user.id)
-    .eq('status', 'accepted');
+    .eq('status', 'accepted')
+    .gte('created_at', `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`)
+    .lt('created_at', targetMonth === 12 ? `${targetYear + 1}-01-01` : `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-01`);
 
   const totalSalary = (activitiesWithSalary ?? []).reduce((sum, act) => sum + (Number(act.salary) || 0), 0);
 

@@ -11,6 +11,22 @@ import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+const formatMonth = (date: Date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - index, 1);
+  const value = formatMonth(date);
+  return {
+    value,
+    label: date.toLocaleString(undefined, { month: 'long', year: 'numeric' }),
+  };
+});
+
 type ActivityStatus = 'pending' | 'accepted' | 'denied';
 
 type ActivityRow = {
@@ -47,6 +63,7 @@ export default function MyActivitiesPage() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]['value']>('all');
+  const [selectedMonth, setSelectedMonth] = useState(() => formatMonth(new Date()));
 
   const [previewActivity, setPreviewActivity] = useState<ActivityRow | null>(null);
 
@@ -62,6 +79,11 @@ export default function MyActivitiesPage() {
     setRefreshing(true);
     try {
       const supabase = createSupabaseBrowserClient();
+      
+      // Parse selected month
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
 
       const [{ data: authData, error: authErr }, { data: activityData, error: activityErr }, { data: typeData, error: typeErr }] =
         await Promise.all([
@@ -69,6 +91,8 @@ export default function MyActivitiesPage() {
           supabase
             .from('hr_activities')
             .select('id, bbc_content, activity_type, status, salary, created_at, reviewed_at, deny_reason')
+            .gte('created_at', startDate)
+            .lt('created_at', endDate)
             .order('created_at', { ascending: false }),
           supabase.from('hr_activities_type').select('key, score, label, process_group'),
         ]);
@@ -98,7 +122,7 @@ export default function MyActivitiesPage() {
   useEffect(() => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedMonth]);
 
   const processGroupMap = useMemo(() => {
     return new Map<string, string>(typeRows.map((r) => [r.key, r.process_group || 'other']));
@@ -133,6 +157,12 @@ export default function MyActivitiesPage() {
     }, 0);
   }, [activities, scoreMap]);
 
+  const totalSalary = useMemo(() => {
+    return activities.reduce((sum, a) => {
+      return sum + (a.status === 'accepted' && a.salary ? Number(a.salary) : 0);
+    }, 0);
+  }, [activities]);
+
   return (
     <>
       <div className="min-h-screen bg-background">
@@ -147,9 +177,17 @@ export default function MyActivitiesPage() {
                     <p className="text-sm text-muted-foreground">Your account</p>
                     <h1 className="text-3xl font-bold text-foreground">My Activities</h1>
                   </div>
-                  <Button onClick={fetchAll} variant="outline" disabled={loading || refreshing}>
-                    {loading || refreshing ? 'Refreshing…' : 'Refresh'}
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Select
+                      label=""
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      options={MONTH_OPTIONS}
+                    />
+                    <Button onClick={fetchAll} variant="outline" disabled={loading || refreshing}>
+                      {loading || refreshing ? 'Refreshing…' : 'Refresh'}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="bg-card border border-border rounded-lg p-4">
@@ -170,12 +208,13 @@ export default function MyActivitiesPage() {
                         options={STATUS_FILTERS.map((s) => ({ value: s.value, label: s.label }))}
                       />
                     </div>
-                    <div className="flex items-end gap-4 text-sm">
+                    <div className="flex items-end gap-4 text-sm flex-wrap">
                       <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">{activities.length}</span></div>
                       <div className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">{pendingCount}</span></div>
                       <div className="text-muted-foreground">Accepted: <span className="font-semibold text-foreground">{acceptedCount}</span></div>
                       <div className="text-muted-foreground">Denied: <span className="font-semibold text-foreground">{deniedCount}</span></div>
                       <div className="text-muted-foreground">Earned: <span className="font-semibold text-foreground">{totalEarned} pts</span></div>
+                      <div className="text-primary font-bold">Monthly Salary: <span className="text-foreground">${totalSalary.toFixed(2)}</span></div>
                     </div>
                   </div>
 

@@ -2,10 +2,27 @@
 
 import Button from '@/components/Button';
 import DashboardNavbar from '@/components/DashboardNavbar';
+import Select from '@/components/Select';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
+const formatMonth = (date: Date) => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  return `${year}-${month}`;
+};
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - index, 1);
+  const value = formatMonth(date);
+  return {
+    value,
+    label: date.toLocaleString(undefined, { month: 'long', year: 'numeric' }),
+  };
+});
 
 type ActivityStatus = 'pending' | 'accepted' | 'denied';
 
@@ -45,11 +62,13 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(() => formatMonth(new Date()));
 
   const fetchSummary = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/dashboard/summary');
+      const params = new URLSearchParams({ month: selectedMonth });
+      const res = await fetch(`/api/dashboard/summary?${params.toString()}`);
       const data = (await res.json()) as { ok: boolean; error?: string } & DashboardSummary;
 
       if (!res.ok || !data.ok) {
@@ -78,7 +97,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchSummary();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth]);
 
   const breakdownTotal = useMemo(
     () => (summary?.activity_breakdown ?? []).reduce((sum, item) => sum + item.count, 0),
@@ -98,30 +118,38 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">Welcome back</p>
               <h1 className="text-2xl font-bold text-foreground">Dashboard Overview</h1>
             </div>
-            <Button variant="outline" onClick={fetchSummary} disabled={refreshing || loading}>
-              {refreshing || loading ? 'Refreshing…' : 'Refresh'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Select
+                label=""
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                options={MONTH_OPTIONS}
+              />
+              <Button variant="outline" onClick={fetchSummary} disabled={refreshing || loading}>
+                {refreshing || loading ? 'Refreshing…' : 'Refresh'}
+              </Button>
+            </div>
           </div>
 
           <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard 
               label="My Salary" 
-              helper="Total earnings from activities" 
+              helper="Total earnings this month" 
               value={loading ? '…' : `$${(summary?.total_salary ?? 0).toFixed(2)}`} 
             />
             <StatCard 
               label="My Activities" 
-              helper="Your submitted logs" 
+              helper="Submitted this month" 
               value={loading ? '…' : summary?.total_activities ?? 0} 
             />
             <StatCard 
               label="Pending Reviews" 
-              helper="Need commander action" 
+              helper="This month, awaiting review" 
               value={loading ? '…' : summary?.pending_reviews ?? 0} 
             />
             <StatCard 
               label="Total Points" 
-              helper="Accepted activity points" 
+              helper="Accepted points this month" 
               value={loading ? '…' : summary?.total_score ?? 0} 
             />
           </section>
@@ -173,7 +201,7 @@ export default function DashboardPage() {
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Activity Mix</h2>
-                <p className="text-xs text-muted-foreground">Distribution by process group</p>
+                <p className="text-xs text-muted-foreground">Distribution by process group (this month)</p>
               </div>
 
               {loading ? (
@@ -206,7 +234,7 @@ export default function DashboardPage() {
           <section className="bg-card border border-border rounded-lg p-4">
             <div className="mb-3">
               <h2 className="text-lg font-semibold text-foreground">Leaderboard</h2>
-              <p className="text-xs text-muted-foreground">Top earners by total salary</p>
+              <p className="text-xs text-muted-foreground">Top 3 HR members for this month</p>
             </div>
 
             {loading ? (

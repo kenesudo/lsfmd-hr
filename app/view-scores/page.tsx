@@ -54,6 +54,10 @@ export default function ViewScoresPage() {
   const leaderboard = useMemo(() => data?.leaderboard ?? [], [data]);
   const activities = useMemo(() => data?.activities ?? [], [data]);
   const monthlySummary = useMemo(() => data?.monthly_summary ?? [], [data]);
+  
+  const totalOverallSalary = useMemo(() => {
+    return monthlySummary.reduce((sum, row) => sum + (row.total_salary || 0), 0);
+  }, [monthlySummary]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -148,9 +152,15 @@ export default function ViewScoresPage() {
             </div>
 
             <div className="bg-card border border-border rounded-lg p-4">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Monthly Activity</h2>
-                <p className="text-xs text-muted-foreground">Accepted activity breakdown per member.</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Monthly Activity</h2>
+                  <p className="text-xs text-muted-foreground">Accepted activity breakdown per member.</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Total Overall Salary</p>
+                  <p className="text-2xl font-bold text-primary">${totalOverallSalary.toFixed(2)}</p>
+                </div>
               </div>
 
               {loading ? (
