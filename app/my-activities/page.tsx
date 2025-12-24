@@ -21,12 +21,14 @@ type ActivityRow = {
   created_at: string;
   reviewed_at: string | null;
   deny_reason: string | null;
+  salary: number | null;
 };
 
 type ActivityTypeRow = {
   key: string;
   score: number;
   label: string;
+  process_group: string;
 };
 
 const STATUS_FILTERS: { value: 'all' | ActivityStatus; label: string }[] = [
@@ -66,9 +68,9 @@ export default function MyActivitiesPage() {
           supabase.auth.getUser(),
           supabase
             .from('hr_activities')
-            .select('id, bbc_content, activity_type, status, created_at, reviewed_at, deny_reason')
+            .select('id, bbc_content, activity_type, status, salary, created_at, reviewed_at, deny_reason')
             .order('created_at', { ascending: false }),
-          supabase.from('hr_activities_type').select('key, score, label'),
+          supabase.from('hr_activities_type').select('key, score, label, process_group'),
         ]);
 
       if (authErr || !authData.user) {
@@ -97,6 +99,10 @@ export default function MyActivitiesPage() {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const processGroupMap = useMemo(() => {
+    return new Map<string, string>(typeRows.map((r) => [r.key, r.process_group || 'other']));
+  }, [typeRows]);
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -134,8 +140,8 @@ export default function MyActivitiesPage() {
           <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden">
             <DashboardNavbar />
-            <main className="flex-1 overflow-y-auto p-6">
-              <div className="max-w-7xl mx-auto space-y-6">
+            <main className="flex-1 overflow-y-auto p-4">
+              <div className="w-full space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Your account</p>
@@ -146,16 +152,17 @@ export default function MyActivitiesPage() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-                    <div className="space-y-4">
+                <div className="bg-card border border-border rounded-lg p-4">
+                  <div className="flex flex-wrap items-center gap-4 mb-4">
+                    <div className="flex-1 min-w-[200px]">
                       <Input
                         label="Search"
                         placeholder="Search activity type"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                       />
-
+                    </div>
+                    <div className="min-w-[150px]">
                       <Select
                         label="Status"
                         value={statusFilter}
@@ -163,32 +170,16 @@ export default function MyActivitiesPage() {
                         options={STATUS_FILTERS.map((s) => ({ value: s.value, label: s.label }))}
                       />
                     </div>
-
-                    <div className="rounded-md border border-border bg-muted/30 p-4 space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Total</span>
-                        <span className="font-semibold text-foreground">{activities.length}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Pending</span>
-                        <span className="font-semibold text-foreground">{pendingCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Accepted</span>
-                        <span className="font-semibold text-foreground">{acceptedCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Denied</span>
-                        <span className="font-semibold text-foreground">{deniedCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
-                        <span className="text-muted-foreground">Total earned</span>
-                        <span className="font-semibold text-foreground">{totalEarned}</span>
-                      </div>
+                    <div className="flex items-end gap-4 text-sm">
+                      <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">{activities.length}</span></div>
+                      <div className="text-muted-foreground">Pending: <span className="font-semibold text-foreground">{pendingCount}</span></div>
+                      <div className="text-muted-foreground">Accepted: <span className="font-semibold text-foreground">{acceptedCount}</span></div>
+                      <div className="text-muted-foreground">Denied: <span className="font-semibold text-foreground">{deniedCount}</span></div>
+                      <div className="text-muted-foreground">Earned: <span className="font-semibold text-foreground">{totalEarned} pts</span></div>
                     </div>
                   </div>
 
-                  <div className="lg:col-span-3 bg-card border border-border rounded-lg p-6">
+                  <div className="w-full">
                     {loading ? (
                       <div className="h-64 flex items-center justify-center text-muted-foreground">Loading activities…</div>
                     ) : rows.length === 0 ? (
@@ -197,89 +188,74 @@ export default function MyActivitiesPage() {
                         <p className="text-sm">Submit an activity to see it here.</p>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {rows.map((activity) => {
-                          const points = computePoints(activity);
-                          const label = labelMap.get(activity.activity_type);
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-muted-foreground border-b border-border">
+                              <th className="py-2 pr-4 font-medium">Activity Type</th>
+                              <th className="py-2 pr-4 font-medium">Process Group</th>
+                              <th className="py-2 pr-4 font-medium">Status</th>
+                              <th className="py-2 pr-4 font-medium">Points</th>
+                              <th className="py-2 pr-4 font-medium">Salary</th>
+                              <th className="py-2 pr-4 font-medium">Created</th>
+                              <th className="py-2 font-medium text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {rows.map((activity) => {
+                              const points = computePoints(activity);
+                              const label = labelMap.get(activity.activity_type);
+                              const processGroup = processGroupMap.get(activity.activity_type) || 'other';
 
-                          return (
-                            <div key={activity.id} className="border border-border rounded-lg p-4">
-                              <div className="flex items-start justify-between gap-4 flex-wrap">
-                                <div className="min-w-0">
-                                  <div className="text-xs text-muted-foreground">Type</div>
-                                  <div className="font-semibold text-foreground">
-                                    {label?.trim() ? label : activity.activity_type}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground mt-1">Key: {activity.activity_type}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Created: {new Date(activity.created_at).toLocaleString()}
-                                  </div>
-                                  {activity.reviewed_at ? (
-                                    <div className="text-xs text-muted-foreground">
-                                      Reviewed: {new Date(activity.reviewed_at).toLocaleString()}
-                                    </div>
-                                  ) : null}
-                                </div>
-
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span
-                                    className={`text-xs px-2 py-1 rounded-full border ${
-                                      activity.status === 'pending'
-                                        ? 'border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
-                                        : activity.status === 'accepted'
-                                          ? 'border-green-500/40 text-green-600 dark:text-green-400'
-                                          : 'border-red-500/40 text-red-600 dark:text-red-400'
-                                    }`}
-                                  >
-                                    {activity.status}
-                                  </span>
-
-                                  <span className="text-xs px-2 py-1 rounded-full border border-border text-foreground">
-                                    {points.label}: {points.points}
-                                  </span>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => setPreviewActivity(activity)}
-                                    className="inline-flex items-center justify-center rounded-md border border-border bg-card px-2 py-1 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                    aria-label="View details"
-                                  >
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      className="h-4 w-4"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                      strokeWidth={1.8}
+                              return (
+                                <tr key={activity.id}>
+                                  <td className="py-3 pr-4">
+                                    <div className="font-medium text-foreground">{label?.trim() ? label : activity.activity_type}</div>
+                                    <div className="text-xs text-muted-foreground">{activity.activity_type}</div>
+                                  </td>
+                                  <td className="py-3 pr-4">
+                                    <span className="inline-flex rounded-full bg-muted px-2 py-1 text-xs font-medium text-foreground capitalize">
+                                      {processGroup}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 pr-4">
+                                    <span
+                                      className={`text-xs px-2 py-1 rounded-full border ${
+                                        activity.status === 'pending'
+                                          ? 'border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
+                                          : activity.status === 'accepted'
+                                            ? 'border-green-500/40 text-green-600 dark:text-green-400'
+                                            : 'border-red-500/40 text-red-600 dark:text-red-400'
+                                      }`}
                                     >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M1.5 12s3.75-7.5 10.5-7.5S22.5 12 22.5 12s-3.75 7.5-10.5 7.5S1.5 12 1.5 12Z"
-                                      />
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15a3 3 0 100-6 3 3 0 000 6Z" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-
-                              {activity.deny_reason ? (
-                                <div className="mt-3 text-sm text-muted-foreground">
-                                  Deny reason: <span className="text-foreground">{activity.deny_reason}</span>
-                                </div>
-                              ) : null}
-
-                              <div className="mt-3">
-                                <label className="block text-xs font-medium text-muted-foreground mb-2">BBC Content</label>
-                                <textarea
-                                  readOnly
-                                  value={activity.bbc_content}
-                                  className="w-full h-32 rounded-md border border-border bg-input px-3 py-2 text-xs text-foreground"
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
+                                      {activity.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 pr-4 text-foreground">{points.points}</td>
+                                  <td className="py-3 pr-4">
+                                    {activity.salary ? (
+                                      <span className="text-foreground font-medium">${activity.salary.toFixed(2)}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground">—</span>
+                                    )}
+                                  </td>
+                                  <td className="py-3 pr-4 text-xs text-muted-foreground">
+                                    {new Date(activity.created_at).toLocaleString()}
+                                  </td>
+                                  <td className="py-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewActivity(activity)}
+                                      className="inline-flex items-center justify-center rounded-md border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    >
+                                      Details
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>

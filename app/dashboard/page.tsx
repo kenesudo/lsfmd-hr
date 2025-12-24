@@ -20,8 +20,18 @@ type DashboardSummary = {
   recent_activities: {
     id: string;
     activity_type: string;
+    activity_label: string;
+    process_group: string;
     status: ActivityStatus;
     created_at: string;
+  }[];
+  leaderboard: {
+    hr_id: string;
+    full_name: string;
+    username: string;
+    hr_rank: string;
+    total_salary: number;
+    total_points: number;
   }[];
 };
 
@@ -56,6 +66,7 @@ export default function DashboardPage() {
         total_salary: data.total_salary ?? 0,
         activity_breakdown: data.activity_breakdown ?? [],
         recent_activities: data.recent_activities ?? [],
+        leaderboard: data.leaderboard ?? [],
       });
     } catch {
       toast.error('Failed to load dashboard overview');
@@ -81,7 +92,7 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
 
-        <main className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+        <main className="flex-1 overflow-y-auto p-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Welcome back</p>
@@ -92,7 +103,7 @@ export default function DashboardPage() {
             </Button>
           </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard 
               label="My Salary" 
               helper="Total earnings from activities" 
@@ -115,14 +126,14 @@ export default function DashboardPage() {
             />
           </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="col-span-1 xl:col-span-2 bg-card border border-border rounded-lg p-6">
-              <header className="flex items-center justify-between mb-4">
+          <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="col-span-1 xl:col-span-2 bg-card border border-border rounded-lg p-4">
+              <header className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="text-xl font-semibold text-foreground">Recent Activity</h2>
-                  <p className="text-sm text-muted-foreground">Latest submissions within your account</p>
+                  <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+                  <p className="text-xs text-muted-foreground">Latest submissions within your account</p>
                 </div>
-                <Link href="/view-activities">
+                <Link href="/my-activities">
                   <Button variant="ghost" size="sm">
                     View all
                   </Button>
@@ -130,54 +141,58 @@ export default function DashboardPage() {
               </header>
 
               {loading ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground">Loading…</div>
+                <div className="h-32 flex items-center justify-center text-muted-foreground">Loading…</div>
               ) : summary?.recent_activities?.length ? (
                 <div className="divide-y divide-border">
                   {summary.recent_activities.map((activity) => (
-                    <article key={activity.id} className="flex items-center justify-between py-4 gap-4 flex-wrap">
-                      <div>
-                        <p className="font-semibold text-foreground capitalize">{activity.activity_type.replace(/_/g, ' ')}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(activity.created_at).toLocaleString(undefined, {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
+                    <article key={activity.id} className="flex items-center justify-between py-2.5 gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{activity.activity_label}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="capitalize">{activity.process_group}</span>
+                          <span>•</span>
+                          <span>
+                            {new Date(activity.created_at).toLocaleString(undefined, {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
                       </div>
-                      <span className={`text-xs px-3 py-1 rounded-full ${STATUS_STYLES[activity.status]}`}>{activity.status}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[activity.status]}`}>{activity.status}</span>
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="h-48 flex items-center justify-center text-muted-foreground">No activity yet.</div>
+                <div className="h-32 flex items-center justify-center text-muted-foreground">No activity yet.</div>
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <div>
-                <h2 className="text-xl font-semibold text-foreground">Activity Mix</h2>
-                <p className="text-sm text-muted-foreground">Distribution by process group</p>
+                <h2 className="text-lg font-semibold text-foreground">Activity Mix</h2>
+                <p className="text-xs text-muted-foreground">Distribution by process group</p>
               </div>
 
               {loading ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground">Loading…</div>
+                <div className="h-32 flex items-center justify-center text-muted-foreground">Loading…</div>
               ) : breakdownTotal === 0 ? (
-                <div className="h-48 flex items-center justify-center text-muted-foreground text-center px-4">
+                <div className="h-32 flex items-center justify-center text-muted-foreground text-center px-4 text-xs">
                   No data yet. Submit new activities to see insights here.
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {(summary?.activity_breakdown ?? []).map((bucket) => {
                     const percentage = Math.round((bucket.count / breakdownTotal) * 100);
                     return (
                       <div key={bucket.process_group}>
-                        <div className="flex items-center justify-between text-sm mb-1">
+                        <div className="flex items-center justify-between text-xs mb-1">
                           <span className="font-medium text-foreground capitalize">{bucket.process_group.replace(/_/g, ' ')}</span>
                           <span className="text-muted-foreground">{percentage}%</span>
                         </div>
-                        <div className="w-full h-2.5 rounded-full bg-muted">
+                        <div className="w-full h-2 rounded-full bg-muted">
                           <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${percentage}%` }} />
                         </div>
                       </div>
@@ -186,6 +201,47 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
+          </section>
+
+          <section className="bg-card border border-border rounded-lg p-4">
+            <div className="mb-3">
+              <h2 className="text-lg font-semibold text-foreground">Leaderboard</h2>
+              <p className="text-xs text-muted-foreground">Top earners by total salary</p>
+            </div>
+
+            {loading ? (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">Loading…</div>
+            ) : summary?.leaderboard?.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground border-b border-border">
+                      <th className="py-2 pr-4 font-medium">#</th>
+                      <th className="py-2 pr-4 font-medium">Member</th>
+                      <th className="py-2 pr-4 font-medium">HR Rank</th>
+                      <th className="py-2 pr-4 font-medium text-right">Points</th>
+                      <th className="py-2 font-medium text-right">Total Salary</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {summary.leaderboard.map((member, idx) => (
+                      <tr key={member.hr_id}>
+                        <td className="py-2 pr-4 text-muted-foreground">{idx + 1}</td>
+                        <td className="py-2 pr-4">
+                          <div className="font-medium text-foreground">{member.full_name}</div>
+                          <div className="text-xs text-muted-foreground">@{member.username}</div>
+                        </td>
+                        <td className="py-2 pr-4 text-xs text-muted-foreground">{member.hr_rank}</td>
+                        <td className="py-2 pr-4 text-right text-foreground">{member.total_points}</td>
+                        <td className="py-2 text-right font-semibold text-foreground">${member.total_salary.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-muted-foreground">No leaderboard data yet.</div>
+            )}
           </section>
         </main>
       </div>

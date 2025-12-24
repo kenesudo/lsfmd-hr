@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     .eq('hr_id', user.id);
   const recentPromise = supabase
     .from('hr_activities')
-    .select('id, activity_type, status, created_at')
+    .select('id, activity_type, status, created_at, hr_activities_type(label, process_group)')
     .eq('hr_id', user.id)
     .order('created_at', { ascending: false })
     .limit(5);
@@ -68,6 +68,9 @@ export async function GET(request: NextRequest) {
     .from('hr_activities')
     .select('activity_type')
     .eq('hr_id', user.id);
+  
+  // Fetch leaderboard data (top 10 members by total salary)
+  const leaderboardPromise = supabase.rpc('get_leaderboard', { limit_count: 10 });
 
   const [
     templatesResult,
@@ -78,6 +81,7 @@ export async function GET(request: NextRequest) {
     acceptedResult,
     typeScoresResult,
     breakdownResult,
+    leaderboardResult,
   ] = await Promise.all([
     templatesPromise,
     pendingPromise,
@@ -87,6 +91,7 @@ export async function GET(request: NextRequest) {
     acceptedPromise,
     typeScoresPromise,
     breakdownPromise,
+    leaderboardPromise,
   ]);
 
   const error =
@@ -97,7 +102,8 @@ export async function GET(request: NextRequest) {
     recentResult.error ||
     acceptedResult.error ||
     typeScoresResult.error ||
-    breakdownResult.error;
+    breakdownResult.error ||
+    leaderboardResult.error;
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -139,6 +145,16 @@ export async function GET(request: NextRequest) {
 
   const totalSalary = (activitiesWithSalary ?? []).reduce((sum, act) => sum + (Number(act.salary) || 0), 0);
 
+  // Enrich recent activities with process_group
+  const enrichedRecent = (recentResult.data ?? []).map((act: any) => ({
+    id: act.id,
+    activity_type: act.activity_type,
+    status: act.status,
+    created_at: act.created_at,
+    activity_label: act.hr_activities_type?.label ?? act.activity_type,
+    process_group: act.hr_activities_type?.process_group ?? 'other',
+  }));
+
   return NextResponse.json({
     ok: true,
     total_templates: templatesResult.count ?? 0,
@@ -148,6 +164,7 @@ export async function GET(request: NextRequest) {
     total_score: totalScore,
     total_salary: totalSalary,
     activity_breakdown: breakdown,
-    recent_activities: recentResult.data ?? [],
+    recent_activities: enrichedRecent,
+    leaderboard: leaderboardResult.data ?? [],
   });
 }

@@ -21,6 +21,8 @@ type Activity = {
   hr_id: string;
   bbc_content: string;
   activity_type: string;
+  process_group: string;
+  activity_label: string;
   status: 'pending' | 'accepted' | 'denied';
   salary: number | null;
   created_at: string;
@@ -158,8 +160,8 @@ export default function ViewActivitiesPage() {
           <Sidebar />
           <div className="flex-1 flex flex-col overflow-hidden">
             <DashboardNavbar />
-            <main className="flex-1 overflow-y-auto p-6">
-              <div className="w-full space-y-6">
+            <main className="flex-1 overflow-y-auto p-4">
+              <div className="w-full space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Commander tools</p>
@@ -170,7 +172,7 @@ export default function ViewActivitiesPage() {
                   </Button>
                 </div>
 
-                <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+                <div className="bg-card border border-border rounded-lg p-4 space-y-4">
                   <div className="flex flex-wrap items-center gap-4">
                     <div className="flex-1 min-w-[250px]">
                       <Input
@@ -236,12 +238,13 @@ export default function ViewActivitiesPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-left text-muted-foreground border-b border-border">
-                              <th className="py-3 pr-4 font-medium">HR Member</th>
-                              <th className="py-3 pr-4 font-medium">Activity Type</th>
-                              <th className="py-3 pr-4 font-medium">Salary</th>
-                              <th className="py-3 pr-4 font-medium">Created</th>
-                              {activeTab !== 'pending' && <th className="py-3 pr-4 font-medium">Reviewed</th>}
-                              <th className="py-3 font-medium text-right">Actions</th>
+                              <th className="py-2 pr-4 font-medium">HR Member</th>
+                              <th className="py-2 pr-4 font-medium">Activity Type</th>
+                              <th className="py-2 pr-4 font-medium">Process Group</th>
+                              <th className="py-2 pr-4 font-medium">Salary</th>
+                              <th className="py-2 pr-4 font-medium">Created</th>
+                              {activeTab !== 'pending' && <th className="py-2 pr-4 font-medium">Reviewed</th>}
+                              <th className="py-2 font-medium text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
@@ -256,8 +259,12 @@ export default function ViewActivitiesPage() {
                                   )}
                                 </td>
                                 <td className="py-4 pr-4">
-                                  <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground capitalize">
-                                    {activity.activity_type.replace(/_/g, ' ')}
+                                  <div className="font-medium text-foreground">{activity.activity_label}</div>
+                                  <div className="text-xs text-muted-foreground">{activity.activity_type}</div>
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <span className="inline-flex rounded-full bg-muted px-2 py-1 text-xs font-medium text-foreground capitalize">
+                                    {activity.process_group}
                                   </span>
                                 </td>
                                 <td className="py-4 pr-4">

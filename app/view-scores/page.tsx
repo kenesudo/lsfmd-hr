@@ -60,44 +60,43 @@ export default function ViewScoresPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <DashboardNavbar />
-        <main className="flex-1 overflow-y-auto p-6">
-          <header className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Commander Tools</p>
-              <h1 className="text-2xl font-bold text-foreground">View Scores</h1>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
+        <main className="flex-1 overflow-y-auto p-4">
+          <div className="w-full space-y-4">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <label className="text-sm font-medium text-foreground">Month</label>
-                <select
-                  value={month}
-                  onChange={(event) => setMonth(event.target.value)}
-                  className="ml-2 h-10 rounded-md border border-border bg-input px-3 text-sm"
-                >
-                  {MONTH_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {new Date(option + '-01T00:00:00Z').toLocaleString(undefined, {
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </option>
-                  ))}
-                </select>
+                <p className="text-sm text-muted-foreground">Commander Tools</p>
+                <h1 className="text-2xl font-bold text-foreground">View Scores</h1>
+                <div className="mt-2">
+                  <label className="text-sm font-medium text-foreground">Month</label>
+                  <select
+                    value={month}
+                    onChange={(event) => setMonth(event.target.value)}
+                    className="ml-2 h-10 rounded-md border border-border bg-input px-3 text-sm"
+                  >
+                    {MONTH_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {new Date(option + '-01T00:00:00Z').toLocaleString(undefined, {
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <Button variant="outline" onClick={fetchScores} disabled={loading}>
                 {loading ? 'Loading…' : 'Refresh'}
               </Button>
             </div>
-          </header>
 
-          {error && (
-            <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-lg p-4">
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-foreground">Leaderboard</h2>
                 <p className="text-sm text-muted-foreground">Top performers for the selected month.</p>
@@ -148,10 +147,10 @@ export default function ViewScoresPage() {
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground">Monthly Activity</h2>
-                <p className="text-sm text-muted-foreground">Accepted activity breakdown per member.</p>
+            <div className="bg-card border border-border rounded-lg p-4">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Monthly Activity</h2>
+                <p className="text-xs text-muted-foreground">Accepted activity breakdown per member.</p>
               </div>
 
               {loading ? (
@@ -199,6 +198,7 @@ export default function ViewScoresPage() {
                   </table>
                 </div>
               )}
+            </div>
             </div>
           </div>
         </main>

@@ -221,8 +221,8 @@ export default function ViewMembersPage() {
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <DashboardNavbar />
-          <main className="flex-1 overflow-y-auto p-6">
-            <div className="w-full space-y-6">
+          <main className="flex-1 overflow-y-auto p-4">
+            <div className="w-full space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Commander tools</p>
@@ -233,7 +233,7 @@ export default function ViewMembersPage() {
                 </Button>
               </div>
 
-              <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="bg-card border border-border rounded-lg p-4 space-y-6">
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex-1 min-w-[200px]">
                     <Input

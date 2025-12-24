@@ -14,6 +14,10 @@ type ActivityRow = {
   reviewed_at: string | null;
   reviewed_by: string | null;
   deny_reason: string | null;
+  hr_activities_type?: {
+    process_group: string;
+    label: string;
+  };
 };
 
 type ProfileLite = {
@@ -56,7 +60,7 @@ export async function GET(request: NextRequest) {
 
   let query = admin
     .from('hr_activities')
-    .select('id, hr_id, bbc_content, activity_type, status, salary, created_at, reviewed_at, reviewed_by, deny_reason')
+    .select('id, hr_id, bbc_content, activity_type, status, salary, created_at, reviewed_at, reviewed_by, deny_reason, hr_activities_type(process_group, label)')
     .order('created_at', { ascending: false })
     .limit(500);
 
@@ -85,7 +89,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: activitiesError.message }, { status: 500 });
   }
 
-  const rows = (activities ?? []) as ActivityRow[];
+  const rows = (activities ?? []) as unknown as ActivityRow[];
   const hrIds = Array.from(new Set(rows.map((r) => r.hr_id)));
   const reviewerIds = Array.from(new Set(rows.map((r) => r.reviewed_by).filter(Boolean) as string[]));
   const allProfileIds = Array.from(new Set([...hrIds, ...reviewerIds]));
@@ -110,6 +114,8 @@ export async function GET(request: NextRequest) {
 
     return {
       ...row,
+      process_group: row.hr_activities_type?.process_group ?? 'other',
+      activity_label: row.hr_activities_type?.label ?? row.activity_type,
       hr: hrProfile,
       reviewer: reviewerProfile,
     };
