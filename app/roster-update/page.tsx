@@ -190,7 +190,7 @@ export default function RosterUpdatePage() {
 
               <DynamicBbcTemplateRunner
                 title="Roster Update"
-                description="Fill the inputs below. If a {{variable}} exists in the template, it must have a field definition in the editor."
+                description="Fill the inputs below. If a {{variable}} exists in the template, it must have a field definition in the BBCode Templates editor."
                 initialProcessType={processType}
                 processTypeLabel="Process"
                 processTypeOptions={processTypeOptions}

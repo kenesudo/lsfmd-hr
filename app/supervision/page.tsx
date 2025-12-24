@@ -188,7 +188,7 @@ export default function SupervisionPage() {
 
             <DynamicBbcTemplateRunner
               title="Session Details"
-              description="Fill the inputs below. Fields are defined in the BBC Templates editor."
+              description="Fill the inputs below. Fields are defined in the BBCode Templates editor."
               initialProcessType={selectedStatus}
               processTypeLabel="Session Type"
               processTypeOptions={processTypeOptions}

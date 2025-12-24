@@ -180,7 +180,7 @@ export default function EmployeeProfilePage() {
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div>
                   <h1 className="text-3xl font-bold text-foreground">Employee Profiles</h1>
-                  <p className="text-muted-foreground">Fields are defined in the BBC Templates editor.</p>
+                  <p className="text-muted-foreground">Fields are defined in the BBCode Templates editor.</p>
                 </div>
               </div>
 

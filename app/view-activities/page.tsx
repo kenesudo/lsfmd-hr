@@ -404,15 +404,15 @@ function ActivityPreviewDialog({ activity, onClose }: ActivityPreviewDialogProps
         </div>
 
         <div className="mt-6 space-y-3">
-          <p className="text-sm font-semibold text-muted-foreground">Parsed BBC Preview</p>
+          <p className="text-sm font-semibold text-muted-foreground">Parsed BBCode Preview</p>
           <div className="mt-4 p-4 bg-secondary rounded-md h-[500px]">
             <BbcodePreview
               html={renderBbcode(activity.bbc_content)}
-              title="Reinstatement BBC preview"
+              title="BBCode preview"
             />
           </div>          
             <p className="text-xs text-muted-foreground">
-            Raw BBC:
+            Raw BBCode:
             <span className="block whitespace-pre-wrap rounded-md border border-dashed border-border bg-background p-3 font-mono text-[11px] text-foreground mt-2">
               {activity.bbc_content}
             </span>

@@ -7,11 +7,11 @@ import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import {
-  buildValuesMap,
-  extractPlaceholders,
-  fillTemplate,
-  type TemplateFieldRow,
-  type TemplateRow
+    buildValuesMap,
+    extractPlaceholders,
+    fillTemplate,
+    type TemplateFieldRow,
+    type TemplateRow
 } from '@/lib/bbcTemplateRunner';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -138,7 +138,7 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
     };
 
     load().catch((error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to load BBC templates');
+      toast.error(error instanceof Error ? error.message : 'Failed to load BBCode templates');
       cachedTemplates = null;
       templatesInFlight = null;
       setTemplates([]);
@@ -270,16 +270,16 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
       await navigator.clipboard.writeText(generatedBBC);
       setCopiedBBC(true);
       setTimeout(() => setCopiedBBC(false), 2000);
-      toast.success('BBC copied');
+      toast.success('BBCode copied');
     } catch {
-      toast.error('Failed to copy BBC');
+      toast.error('Failed to copy BBCode');
     }
   };
 
   const handlePrimaryAction = async () => {
     if (!selectedTemplate || !onPrimaryAction) return;
     if (!generatedBBC) {
-      toast.error('Generate the BBC output first.');
+      toast.error('Generate the BBCode output first.');
       return;
     }
 
@@ -345,7 +345,7 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4 space-y-5">
         <div>
-          <p className="text-sm text-muted-foreground">{description ?? 'Fill fields to generate the BBC output.'}</p>
+          <p className="text-sm text-muted-foreground">{description ?? 'Fill fields to generate the BBCode output.'}</p>
           <h2 className="text-xl font-semibold text-foreground mt-2">{title}</h2>
         </div>
 
@@ -364,14 +364,14 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
 
           {selectedProcessType && !selectedTemplate && !loadingTemplates ? (
             <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">
-              No BBC template exists yet for:
+              No BBCode template exists yet for:
               <div className="mt-2 font-mono text-xs whitespace-pre-wrap">{selectedProcessType}</div>
             </div>
           ) : null}
 
           {missingFieldKeys.length ? (
             <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-primary">
-              Missing field definitions in BBC Templates editor:
+              Missing field definitions in BBCode Templates editor:
               <div className="mt-2 font-mono text-xs whitespace-pre-wrap">{missingFieldKeys.join('\n')}</div>
             </div>
           ) : null}
@@ -391,7 +391,7 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
       <div className="bg-card border border-border rounded-lg p-6 lg:col-span-8 flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button onClick={handleCopy} disabled={!generatedBBC} variant="outline" className="flex-1">
-            {copiedBBC ? '✓ Copied!' : 'Copy BBC'}
+            {copiedBBC ? '✓ Copied!' : 'Copy BBCode'}
           </Button>
           {onPrimaryAction ? (
             <Button
@@ -408,10 +408,10 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
         {generatedBBC ? (
           <div className="space-y-4">
             <div className="p-4 bg-secondary rounded-md h-[600px]">
-              <BbcodePreview html={renderBbcode(generatedBBC)} title="BBC preview" />
+              <BbcodePreview html={renderBbcode(generatedBBC)} title="BBCode preview" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-2">Raw BBC</p>
+              <p className="text-xs text-muted-foreground mb-2">Raw BBCode</p>
               <div className="rounded-md border border-dashed border-border bg-background p-3 font-mono text-[11px] text-foreground whitespace-pre-wrap">
                 {generatedBBC}
               </div>
@@ -419,7 +419,7 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
           </div>
         ) : (
           <div className="text-sm text-muted-foreground border border-dashed border-border rounded-md p-6 text-center">
-            Generate a template to preview the BBC output.
+            Generate a template to preview the BBCode output.
           </div>
         )}
       </div>

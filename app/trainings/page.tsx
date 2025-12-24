@@ -171,7 +171,7 @@ export default function TrainingsPage() {
 
               <DynamicBbcTemplateRunner
                 title="Inputs"
-                description="Fields are defined in the BBC Templates editor."
+                description="Fields are defined in the BBCode Templates editor."
                 initialProcessType={selectedStatus}
                 processTypeLabel="Status"
                 processTypeOptions={processTypeOptions}
