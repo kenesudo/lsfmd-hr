@@ -59,6 +59,10 @@ export default function ViewMembersPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]['value']>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [passwordPopup, setPasswordPopup] = useState<{
+    memberName: string;
+    password: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchMembers();
@@ -210,6 +214,47 @@ export default function ViewMembersPage() {
     }
   };
 
+  const handleForcePasswordReset = async (member: Member) => {
+    if (updatingId) return;
+    setUpdatingId(member.id);
+    try {
+      const res = await fetch(`/api/commander/members/${member.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mustChangePassword: true }),
+      });
+      const data = (await res.json()) as { ok: boolean; error?: string; tempPassword?: string | null };
+      if (!res.ok || !data.ok) {
+        toast.error(data.error || 'Failed to force password reset');
+        return;
+      }
+
+      const tempPassword = data.tempPassword ?? null;
+      if (!tempPassword) {
+        toast.error('Password reset required, but no temp password was returned.');
+        return;
+      }
+
+      setMembers((prev) =>
+        prev.map((item) => (item.id === member.id ? { ...item, must_change_password: true } : item)),
+      );
+
+      setPasswordPopup({ memberName: member.full_name, password: tempPassword });
+
+      try {
+        await navigator.clipboard.writeText(tempPassword);
+        toast.success('Password reset required (copied to clipboard)');
+      } catch {
+        toast.success('Password reset required');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to force password reset');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const handleRefresh = () => {
     setRefreshing(true);
     fetchMembers();
@@ -217,6 +262,41 @@ export default function ViewMembersPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {passwordPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-sm">
+            <div className="mb-4">
+              <div className="text-lg font-semibold text-foreground">Temporary password</div>
+              <div className="text-sm text-muted-foreground">
+                Share this with <span className="font-medium text-foreground">{passwordPopup.memberName}</span>. They will be required to change it on next login.
+              </div>
+            </div>
+
+            <div className="rounded-md border border-border bg-background px-3 py-2 font-mono text-sm text-foreground break-all">
+              {passwordPopup.password}
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(passwordPopup.password);
+                    toast.success('Copied');
+                  } catch {
+                    toast.error('Failed to copy');
+                  }
+                }}
+              >
+                Copy
+              </Button>
+              <Button variant="primary" onClick={() => setPasswordPopup(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -357,6 +437,14 @@ export default function ViewMembersPage() {
                                     onClick={() => handleDisableToggle(member)}
                                   >
                                     {member.is_disabled ? 'Enable' : 'Disable'}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={Boolean(updatingId)}
+                                    onClick={() => handleForcePasswordReset(member)}
+                                  >
+                                    Force password reset
                                   </Button>
                                   {member.must_change_password && (
                                     <span className="text-xs text-muted-foreground">Must change password</span>
