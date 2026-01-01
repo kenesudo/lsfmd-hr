@@ -78,6 +78,12 @@ function LoginForm({ next }: { next: string }) {
         data: { user },
       } = await supabase.auth.getUser();
 
+      try {
+        await fetch('/api/login-history', { method: 'POST' });
+      } catch {
+        // ignore
+      }
+
       if (user?.user_metadata?.must_change_password) {
         window.location.assign('/change-password');
         return;

@@ -239,6 +239,16 @@ export default function Sidebar() {
       ),
     },
     {
+      name: 'Login History',
+      href: '/commander/login-history',
+      icon: (
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+    },
+    {
       name: 'Create Account',
       href: '/commander/create-account',
       icon: (
