@@ -7,11 +7,11 @@ import Select from '@/components/Select';
 import Textarea from '@/components/Textarea';
 import { renderBbcode } from '@/lib/bbcode';
 import {
-    buildValuesMap,
-    extractPlaceholders,
-    fillTemplate,
-    type TemplateFieldRow,
-    type TemplateRow
+  buildValuesMap,
+  extractPlaceholders,
+  fillTemplate,
+  type TemplateFieldRow,
+  type TemplateRow
 } from '@/lib/bbcTemplateRunner';
 import { createSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -80,7 +80,10 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
 
   const [generatedBBC, setGeneratedBBC] = useState('');
   const [copiedBBC, setCopiedBBC] = useState(false);
+  const [showCopyReminder, setShowCopyReminder] = useState(false);
   const [working, setWorking] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [flickerSave, setFlickerSave] = useState(false);
 
   const onProcessTypeChangeRef = useRef<typeof onProcessTypeChange>(onProcessTypeChange);
   const onGeneratedChangeRef = useRef<typeof onGeneratedChange>(onGeneratedChange);
@@ -102,6 +105,63 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
     const cb = onGeneratedChangeRef.current;
     if (cb) cb(generatedBBC);
   }, [generatedBBC]);
+
+  useEffect(() => {
+    if (!onPrimaryAction) return;
+    setHasUnsavedChanges(Boolean(generatedBBC));
+  }, [generatedBBC, onPrimaryAction]);
+
+  useEffect(() => {
+    if (!onPrimaryAction) return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      e.preventDefault();
+      e.returnValue = 'Do you really want to exit? You have not saved it yet.';
+    };
+
+    window.addEventListener('beforeunload', handler);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+    };
+  }, [hasUnsavedChanges, onPrimaryAction]);
+
+  useEffect(() => {
+    if (!onPrimaryAction) return;
+
+    const message = 'Do you really want to exit? You have not saved it yet.';
+
+    const onClickCapture = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = e.target as Element | null;
+      if (!target) return;
+
+      const anchor = target.closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      if (anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+      if (href.startsWith('#')) return;
+      if (href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+
+      const ok = window.confirm(message);
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', onClickCapture, true);
+    return () => {
+      document.removeEventListener('click', onClickCapture, true);
+    };
+  }, [hasUnsavedChanges, onPrimaryAction]);
 
   useEffect(() => {
     if (hasLoadedTemplatesRef.current) return;
@@ -270,6 +330,13 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
       await navigator.clipboard.writeText(generatedBBC);
       setCopiedBBC(true);
       setTimeout(() => setCopiedBBC(false), 2000);
+      setShowCopyReminder(true);
+      setHasUnsavedChanges(true);
+      if (onPrimaryAction) {
+        setFlickerSave(true);
+      } else {
+        setTimeout(() => setShowCopyReminder(false), 7000);
+      }
       toast.success('BBCode copied');
     } catch {
       toast.error('Failed to copy BBCode');
@@ -286,6 +353,18 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
     setWorking(true);
     try {
       await onPrimaryAction({ generatedBBC, template: selectedTemplate, inputValues });
+      setHasUnsavedChanges(false);
+      setFlickerSave(false);
+      setShowCopyReminder(false);
+      setCopiedBBC(false);
+      setGeneratedBBC('');
+      setInputValues((prev) => {
+        const next = { ...prev };
+        for (const field of fields) {
+          next[field.field_key] = buildDefaultForField(field);
+        }
+        return next;
+      });
     } finally {
       setWorking(false);
     }
@@ -343,6 +422,13 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {showCopyReminder ? (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-4">
+          <div className="warning-blink max-w-3xl rounded-md border border-primary/20 bg-primary px-12 py-6 text-base text-primary-foreground shadow-lg">
+            Don’t forget to click <span className="font-semibold">Save Activity</span> so it will be recorded.
+          </div>
+        </div>
+      ) : null}
       <div className="bg-card border border-border rounded-lg p-6 lg:col-span-4 space-y-5">
         <div>
           <p className="text-sm text-muted-foreground">{description ?? 'Fill fields to generate the BBCode output.'}</p>
@@ -396,11 +482,10 @@ export default function DynamicBbcTemplateRunner(props: DynamicBbcTemplateRunner
           {onPrimaryAction ? (
             <Button
               onClick={handlePrimaryAction}
-              disabled={!generatedBBC || working}
-              variant="primary"
-              className="flex-1"
+              disabled={working || !generatedBBC}
+              className={`flex-1 ${flickerSave ? 'warning-blink' : ''}`}
             >
-              {working ? 'Working…' : primaryActionLabel}
+              {working ? 'Saving…' : primaryActionLabel}
             </Button>
           ) : null}
         </div>
